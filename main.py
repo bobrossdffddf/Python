@@ -14,17 +14,17 @@ SLOWDOWN_RATE = 0.02
 def generate_squawk():
     return "".join(str(random.randint(0, 7)) for _ in range(4))
 
-def make_clearance(flightplan):
+def make_clearance(flightplan, runway="___"):
     callsign = flightplan["callsign"]
     arriving = flightplan["arriving"]
     flightlevel = int(flightplan["flightlevel"])
     squawk = generate_squawk()
 
     return (
-        f"{callsign}, cleared IRF to {arriving} airport as filed.\n"
-        f"Clear for runway ___.\n"  # Added "Clear for runway ___"
+        f"{callsign}, cleared IFR to {arriving} airport as filed.\n"
+        f"Clear for runway {runway}.\n"
         f"Climb and maintain {flightlevel * 100} feet.\n"
-        f"After departure maintain  heading\n"
+        f"After departure maintain heading\n"
         f"Squawk {squawk}.\n"
     )
 
@@ -72,6 +72,7 @@ async def websocket_listener():
                             timestamp = datetime.now().strftime("%H:%M:%S")
 
                             # Add to history
+                            squawk = generate_squawk()
                             flight_info = {
                                 "timestamp": timestamp,
                                 "callsign": flightplan["callsign"],
@@ -79,6 +80,8 @@ async def websocket_listener():
                                 "departing": flightplan["departing"],
                                 "arriving": flightplan["arriving"],
                                 "flightlevel": flightplan["flightlevel"],
+                                "route": flightplan.get("route", "N/A"),
+                                "squawk": squawk,
                                 "clearance": clearance
                             }
                             flights_history.append(flight_info)
