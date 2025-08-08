@@ -68,7 +68,7 @@ async def websocket_listener():
                         # Handle flight plans
                         if packet.get("t") in ["FLIGHT_PLAN", "EVENT_FLIGHT_PLAN"]:
                             flightplan = packet["d"]
-                            clearance = make_clearance(flightplan)
+                            clearance = make_clearance(flightplan, "___")  # Default runway placeholder
                             timestamp = datetime.now().strftime("%H:%M:%S")
 
                             # Add to history
@@ -137,9 +137,13 @@ def get_status():
 @app.route('/api/generate_clearance', methods=['POST'])
 def generate_clearance():
     try:
-        flightplan = request.json
-        clearance = make_clearance(flightplan)
+        data = request.json
+        flightplan = data.get('flightplan', {})
+        runway = data.get('runway', '___')
+        
+        clearance = make_clearance(flightplan, runway)
         timestamp = datetime.now().strftime("%H:%M:%S")
+        squawk = generate_squawk()
 
         flight_info = {
             "timestamp": timestamp,
@@ -148,6 +152,8 @@ def generate_clearance():
             "departing": flightplan["departing"],
             "arriving": flightplan["arriving"],
             "flightlevel": flightplan["flightlevel"],
+            "route": flightplan.get("route", "N/A"),
+            "squawk": squawk,
             "clearance": clearance
         }
         flights_history.append(flight_info)

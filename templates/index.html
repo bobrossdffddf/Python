@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ATC Flight Plan Monitor</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -261,19 +271,21 @@
             background: rgba(0, 0, 0, 0.95);
             border: 2px solid #4CAF50;
             border-radius: 15px;
-            padding: 20px;
+            padding: 0;
             z-index: 2000;
             backdrop-filter: blur(20px);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
         }
 
         .map-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.8);
             border-bottom: 1px solid #4CAF50;
-            padding-bottom: 10px;
+            border-radius: 15px 15px 0 0;
         }
 
         .close-map-btn {
@@ -286,58 +298,59 @@
             font-size: 16px;
         }
 
-        .aircraft-map {
-            height: calc(100% - 80px);
-            overflow-y: auto;
+        .map-content {
+            height: calc(100% - 60px);
+            position: relative;
         }
 
-        .map-info {
-            text-align: center;
-            color: #81C784;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: rgba(76, 175, 80, 0.1);
-            border-radius: 10px;
+        #leafletMap {
+            height: 100%;
+            width: 100%;
         }
 
-        .aircraft-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 15px;
-        }
-
-        .aircraft-item {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            padding: 15px;
-            backdrop-filter: blur(10px);
-        }
-
-        .aircraft-callsign {
-            font-weight: bold;
-            color: #4CAF50;
-            font-size: 16px;
-            margin-bottom: 8px;
-        }
-
-        .aircraft-details {
-            font-size: 12px;
-            color: #B0BEC5;
-        }
-
-        .aircraft-details div {
-            margin: 3px 0;
-        }
-
-        .online-status {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
+        .aircraft-marker {
             background: #4CAF50;
+            border: 2px solid #ffffff;
             border-radius: 50%;
-            margin-right: 5px;
-            animation: pulse 2s infinite;
+            width: 12px;
+            height: 12px;
+        }
+
+        .aircraft-marker.ground {
+            background: #ff9800;
+        }
+
+        .aircraft-marker.air {
+            background: #2196F3;
+        }
+
+        .leaflet-popup-content {
+            color: #000;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .leaflet-popup-content strong {
+            color: #1976D2;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .aircraft-trail {
+            stroke: #4CAF50;
+            stroke-width: 2;
+            fill: none;
+            opacity: 0.7;
         }
     </style>
 </head>
@@ -354,6 +367,10 @@
     </div>
 
     <div class="controls">
+        <div class="control-group">
+            <label>🛬 Runway:</label>
+            <input type="text" id="runwayInput" placeholder="e.g., 09L" maxlength="3" style="width: 80px;">
+        </div>
         <div class="control-group">
             <label>🏢 Airport Filter:</label>
             <select id="airportFilter">
@@ -405,16 +422,14 @@
     <!-- Map Container (initially hidden) -->
     <div id="mapContainer" class="map-container" style="display: none;">
         <div class="map-header">
-            <h3>🗺️ Live ATC Map</h3>
+            <h3>🗺️ Live ATC Map - PTFS</h3>
             <button onclick="closeMap()" class="close-map-btn">✖️</button>
         </div>
-        <div id="aircraftMap" class="aircraft-map">
-            <div class="map-info">
-                <p>📡 Live aircraft positions from ATC 24</p>
-                <p>🔄 Updates every 2 seconds</p>
-            </div>
-            <div id="aircraftList" class="aircraft-list">
-                <p>No aircraft data available...</p>
+        <div class="map-content">
+            <div id="leafletMap"></div>
+            <div class="map-controls">
+                <div>🛩️ Aircraft: <span id="aircraftCount">0</span></div>
+                <div>🔄 Last Update: <span id="lastUpdate">Never</span></div>
             </div>
         </div>
     </div>
@@ -434,6 +449,9 @@
         let isApprovalBoxCollapsed = false;
         let aircraftData = {};
         let isMapOpen = false;
+        let map = null;
+        let aircraftMarkers = {};
+        let aircraftTrails = {};
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -477,7 +495,7 @@
                     const newFlightPlans = newFlights.slice(lastFlightCount);
                     for (const flight of newFlightPlans) {
                         if (flight.departing === currentFilter || flight.arriving === currentFilter) {
-                            playBeep();
+                            playNotificationSound();
                             // Mark as new flight
                             flight.isNew = true;
                             setTimeout(() => {
@@ -551,6 +569,12 @@
                         </div>
                         <div class="flight-detail">
                             <strong>📊 Flight Level:</strong><br>FL${flight.flightlevel}
+                        </div>
+                        <div class="flight-detail">
+                            <strong>🗺️ Route:</strong><br>${flight.route || 'N/A'}
+                        </div>
+                        <div class="flight-detail">
+                            <strong>📡 Squawk:</strong><br>${flight.squawk || 'N/A'}
                         </div>
                     </div>
                     <div class="clearance">
@@ -630,19 +654,41 @@
             window.open('/api/export_history', '_blank');
         }
 
-        function playBeep() {
-            // This function is no longer used as beep elements were removed.
-        }
-
-        function testBeep() {
-            // This function is no longer used as beep elements were removed.
+        function playNotificationSound() {
+            // Create a pleasant notification sound
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
         }
 
         function openMap() {
             const mapContainer = document.getElementById('mapContainer');
             mapContainer.style.display = 'block';
             isMapOpen = true;
-            updateAircraftMap();
+            
+            if (!map) {
+                initializeMap();
+            }
+            
+            // Refresh the map size and update aircraft
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                    updateAircraftMap();
+                }
+            }, 100);
         }
 
         function closeMap() {
@@ -651,35 +697,159 @@
             isMapOpen = false;
         }
 
+        function initializeMap() {
+            // Initialize the map centered on a general aviation area
+            map = L.map('leafletMap').setView([25.0, -80.0], 8);
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add a secondary satellite layer option
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri'
+            });
+
+            // Layer control
+            const baseMaps = {
+                "Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }),
+                "Satellite": satelliteLayer
+            };
+
+            L.control.layers(baseMaps).addTo(map);
+
+            // Add PTFS airports as markers
+            const airports = [
+                {name: 'IBAR', lat: 25.7617, lng: -80.1918, desc: 'Barra Airport'},
+                {name: 'IHEN', lat: 25.7753, lng: -80.1348, desc: 'Henderson Airport'},
+                {name: 'ILAR', lat: 25.7889, lng: -80.2264, desc: 'Larnaca Airport'},
+                {name: 'IIAB', lat: 25.8067, lng: -80.0969, desc: 'IAB Airport'},
+                {name: 'IPAP', lat: 25.6586, lng: -80.2878, desc: 'Paphos Airport'},
+                {name: 'IGRV', lat: 25.9123, lng: -80.1456, desc: 'Grove Airport'},
+                {name: 'IJAF', lat: 25.5434, lng: -80.3421, desc: 'Jaffa Airport'},
+                {name: 'IZOL', lat: 25.7234, lng: -80.4123, desc: 'Zola Airport'},
+                {name: 'ISCM', lat: 25.8234, lng: -80.3567, desc: 'SCM Airport'},
+                {name: 'IDCS', lat: 25.6789, lng: -80.0234, desc: 'DCS Airport'},
+                {name: 'ITKO', lat: 25.9876, lng: -80.2345, desc: 'TKO Airport'},
+                {name: 'ILKL', lat: 25.4567, lng: -80.1789, desc: 'LKL Airport'},
+                {name: 'IPPH', lat: 25.8901, lng: -80.4567, desc: 'PPH Airport'},
+                {name: 'IGAR', lat: 25.3456, lng: -80.2890, desc: 'Garfield Airport'},
+                {name: 'IBLT', lat: 25.7890, lng: -80.0456, desc: 'BLT Airport'},
+                {name: 'IRFD', lat: 25.6123, lng: -80.3789, desc: 'RFD Airport'},
+                {name: 'IMLR', lat: 25.9234, lng: -80.1234, desc: 'MLR Airport'},
+                {name: 'ITRC', lat: 25.4789, lng: -80.4012, desc: 'TRC Airport'},
+                {name: 'IBTH', lat: 25.8567, lng: -80.2678, desc: 'BTH Airport'},
+                {name: 'IUFO', lat: 25.7345, lng: -80.3456, desc: 'UFO Airport'},
+                {name: 'ISAU', lat: 25.5678, lng: -80.0789, desc: 'SAU Airport'},
+                {name: 'ISKP', lat: 25.8012, lng: -80.4234, desc: 'SKP Airport'}
+            ];
+
+            airports.forEach(airport => {
+                const airportIcon = L.divIcon({
+                    className: 'airport-marker',
+                    html: `<div style="background: #ff6b6b; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">${airport.name}</div>`,
+                    iconSize: [40, 20],
+                    iconAnchor: [20, 10]
+                });
+
+                L.marker([airport.lat, airport.lng], {icon: airportIcon})
+                 .addTo(map)
+                 .bindPopup(`<strong>${airport.name}</strong><br>${airport.desc}`);
+            });
+        }
+
+        function convertPTFSToLatLng(ptfsX, ptfsY) {
+            // Convert PTFS coordinates to lat/lng
+            // This is an approximation - you may need to adjust based on actual PTFS coordinate system
+            const centerLat = 25.7617;
+            const centerLng = -80.1918;
+            const scale = 0.001; // Adjust this scale factor as needed
+            
+            const lat = centerLat + (ptfsY * scale);
+            const lng = centerLng + (ptfsX * scale);
+            
+            return [lat, lng];
+        }
+
         function updateAircraftMap() {
-            if (!isMapOpen) return;
+            if (!isMapOpen || !map) return;
 
-            const aircraftList = document.getElementById('aircraftList');
             const aircraftCount = Object.keys(aircraftData).length;
+            document.getElementById('aircraftCount').textContent = aircraftCount;
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
 
-            if (aircraftCount === 0) {
-                aircraftList.innerHTML = '<p style="text-align: center; color: #888;">No aircraft data available...</p>';
-                return;
-            }
+            if (aircraftCount === 0) return;
 
-            aircraftList.innerHTML = Object.entries(aircraftData).map(([callsign, data]) => `
-                <div class="aircraft-item">
-                    <div class="aircraft-callsign">
-                        <span class="online-status"></span>${callsign}
-                    </div>
-                    <div class="aircraft-details">
-                        <div><strong>Pilot:</strong> ${data.playerName || 'Unknown'}</div>
-                        <div><strong>Aircraft:</strong> ${data.aircraftType || 'Unknown'}</div>
-                        <div><strong>Altitude:</strong> ${data.altitude ? Math.round(data.altitude) + ' ft' : 'Unknown'}</div>
-                        <div><strong>Heading:</strong> ${data.heading || 'Unknown'}°</div>
-                        <div><strong>Speed:</strong> ${data.speed ? Math.round(data.speed) + ' kts' : 'Unknown'}</div>
-                        <div><strong>Ground Speed:</strong> ${data.groundSpeed ? Math.round(data.groundSpeed) + ' kts' : 'Unknown'}</div>
-                        <div><strong>Position:</strong> ${data.position ? `${data.position.x}, ${data.position.y}` : 'Unknown'}</div>
-                        <div><strong>Wind:</strong> ${data.wind || 'Unknown'}</div>
-                        <div><strong>On Ground:</strong> ${data.isOnGround ? 'Yes' : 'No'}</div>
-                    </div>
-                </div>
-            `).join('');
+            // Clear old markers that are no longer in the data
+            Object.keys(aircraftMarkers).forEach(callsign => {
+                if (!aircraftData[callsign]) {
+                    map.removeLayer(aircraftMarkers[callsign]);
+                    delete aircraftMarkers[callsign];
+                    
+                    if (aircraftTrails[callsign]) {
+                        map.removeLayer(aircraftTrails[callsign]);
+                        delete aircraftTrails[callsign];
+                    }
+                }
+            });
+
+            // Update or create markers for each aircraft
+            Object.entries(aircraftData).forEach(([callsign, data]) => {
+                if (!data.position) return;
+
+                const [lat, lng] = convertPTFSToLatLng(data.position.x, data.position.z || data.position.y);
+                
+                // Create or update marker
+                if (aircraftMarkers[callsign]) {
+                    // Update existing marker position
+                    aircraftMarkers[callsign].setLatLng([lat, lng]);
+                } else {
+                    // Create new marker
+                    const isOnGround = data.isOnGround || (data.altitude && data.altitude < 100);
+                    const markerColor = isOnGround ? '#ff9800' : '#2196F3';
+                    
+                    const aircraftIcon = L.divIcon({
+                        className: 'aircraft-marker',
+                        html: `<div style="background: ${markerColor}; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; transform: rotate(${data.heading || 0}deg);"></div>`,
+                        iconSize: [12, 12],
+                        iconAnchor: [6, 6]
+                    });
+
+                    const marker = L.marker([lat, lng], {icon: aircraftIcon}).addTo(map);
+                    
+                    // Create popup with aircraft info
+                    const popupContent = `
+                        <strong>${callsign}</strong><br>
+                        <strong>Pilot:</strong> ${data.playerName || 'Unknown'}<br>
+                        <strong>Aircraft:</strong> ${data.aircraftType || 'Unknown'}<br>
+                        <strong>Altitude:</strong> ${data.altitude ? Math.round(data.altitude) + ' ft' : 'Unknown'}<br>
+                        <strong>Heading:</strong> ${data.heading || 'Unknown'}°<br>
+                        <strong>Speed:</strong> ${data.speed ? Math.round(data.speed) + ' kts' : 'Unknown'}<br>
+                        <strong>Ground Speed:</strong> ${data.groundSpeed ? Math.round(data.groundSpeed) + ' kts' : 'Unknown'}<br>
+                        <strong>On Ground:</strong> ${isOnGround ? 'Yes' : 'No'}
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    aircraftMarkers[callsign] = marker;
+                }
+
+                // Update marker popup
+                const isOnGround = data.isOnGround || (data.altitude && data.altitude < 100);
+                const popupContent = `
+                    <strong>${callsign}</strong><br>
+                    <strong>Pilot:</strong> ${data.playerName || 'Unknown'}<br>
+                    <strong>Aircraft:</strong> ${data.aircraftType || 'Unknown'}<br>
+                    <strong>Altitude:</strong> ${data.altitude ? Math.round(data.altitude) + ' ft' : 'Unknown'}<br>
+                    <strong>Heading:</strong> ${data.heading || 'Unknown'}°<br>
+                    <strong>Speed:</strong> ${data.speed ? Math.round(data.speed) + ' kts' : 'Unknown'}<br>
+                    <strong>Ground Speed:</strong> ${data.groundSpeed ? Math.round(data.groundSpeed) + ' kts' : 'Unknown'}<br>
+                    <strong>On Ground:</strong> ${isOnGround ? 'Yes' : 'No'}
+                `;
+                aircraftMarkers[callsign].setPopupContent(popupContent);
+            });
         }
     </script>
 </body>
