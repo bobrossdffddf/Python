@@ -122,14 +122,22 @@ def index():
 
 @app.route('/api/flights')
 def get_flights():
-    flights_to_return = flights_history[-50:].copy()
+    flights_to_return = []
     
     # If filtering is active, remove clearance for arriving flights to the filtered airport
     if current_airport_filter:
-        for flight in flights_to_return:
+        for flight in flights_history[-50:]:
+            flight_copy = flight.copy()
             if flight["arriving"] == current_airport_filter:
-                flight = flight.copy()  # Don't modify the original
-                flight.pop("clearance", None)  # Remove clearance
+                flight_copy.pop("clearance", None)  # Remove clearance for arriving flights
+                flight_copy["is_arriving_to_filter"] = True  # Mark for red styling
+            else:
+                flight_copy["is_arriving_to_filter"] = False
+            flights_to_return.append(flight_copy)
+    else:
+        flights_to_return = [flight.copy() for flight in flights_history[-50:]]
+        for flight in flights_to_return:
+            flight["is_arriving_to_filter"] = False
     
     return jsonify(flights_to_return)
 

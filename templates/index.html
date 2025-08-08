@@ -236,6 +236,15 @@
             border-left: 4px solid #ff9800;
             animation: pulse 2s infinite;
         }
+        .arriving-flight {
+            border-left: 4px solid #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+        .arriving-flight .flight-callsign {
+            background: linear-gradient(45deg, #f44336, #e57373);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
         @keyframes pulse {
             0%, 100% { 
                 box-shadow: 0 0 20px rgba(255, 152, 0, 0.3);
@@ -566,8 +575,17 @@
                 return;
             }
 
-            flightsList.innerHTML = filteredFlights.reverse().map(flight => `
-                <div class="flight-card ${flight.isNew ? 'new-flight' : ''}">
+            flightsList.innerHTML = filteredFlights.reverse().map(flight => {
+                const isArrivingToFilter = flight.is_arriving_to_filter || false;
+                const clearanceSection = flight.clearance ? `
+                    <div class="clearance">
+                        <strong>📋 Clearance:</strong><br>
+                        ${flight.clearance}
+                    </div>
+                ` : '';
+                
+                return `
+                <div class="flight-card ${flight.isNew ? 'new-flight' : ''} ${isArrivingToFilter ? 'arriving-flight' : ''}">
                     <input type="checkbox" class="approve-checkbox" onchange="toggleApproval('${flight.callsign}', this.checked)" ${approvedFlights.has(flight.callsign) ? 'checked' : ''}>
                     <div class="flight-header">
                         <div class="flight-callsign">${flight.callsign}</div>
@@ -590,12 +608,9 @@
                             <strong>🗺️ Route:</strong><br>${flight.route || 'N/A'}
                         </div>
                     </div>
-                    <div class="clearance">
-                        <strong>📋 Clearance:</strong><br>
-                        ${flight.clearance}
-                    </div>
+                    ${clearanceSection}
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function toggleApproval(callsign, isChecked) {
