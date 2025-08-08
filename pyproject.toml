@@ -7,4 +7,5 @@ requires-python = ">=3.11"
 dependencies = [
     "websockets>=15.0.1",
     "PySimpleGUI>=5.0.0",
+    "flask>=3.1.1",
 ]

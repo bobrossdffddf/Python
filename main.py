@@ -3,11 +3,11 @@ import json
 import random
 import asyncio
 import websockets
-import PySimpleGUI as sg
 import threading
-import queue
 import time
 from datetime import datetime
+from flask import Flask, render_template, jsonify, request, send_file
+import io
 
 DEFAULT_HEADING = 180
 SLOWDOWN_RATE = 0.02
@@ -40,15 +40,22 @@ MOCK_FLIGHTPLAN = {
     "flightlevel": "040"
 }
 
-msg_queue = queue.Queue()
+app = Flask(__name__)
 flights_history = []
+status_log = []
+connection_status = "Disconnected"
 
-async def websocket_listener(queue):
+async def websocket_listener():
+    global connection_status
     url = "wss://24data.ptfs.app/wss"
     while True:
         try:
             async with websockets.connect(url) as ws:
-                queue.put(("[STATUS]", "Connected to ATC 24 feed.", None))
+                connection_status = "Connected"
+                status_log.append({
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    "message": "Connected to ATC 24 feed."
+                })
                 async for message in ws:
                     try:
                         packet = json.loads(message)
@@ -69,100 +76,89 @@ async def websocket_listener(queue):
                             }
                             flights_history.append(flight_info)
                             
-                            queue.put(("CLEARANCE", clearance, flight_info))
+                            # Keep only last 100 flights
+                            if len(flights_history) > 100:
+                                flights_history.pop(0)
+                                
                     except Exception as e:
-                        queue.put(("[ERROR]", f"Processing message: {e}", None))
+                        status_log.append({
+                            "timestamp": datetime.now().strftime("%H:%M:%S"),
+                            "message": f"Processing message error: {e}"
+                        })
         except Exception as e:
-            queue.put(("[ERROR]", f"Connection error: {e}. Reconnecting in 5 seconds...", None))
+            connection_status = "Error"
+            status_log.append({
+                "timestamp": datetime.now().strftime("%H:%M:%S"),
+                "message": f"Connection error: {e}. Reconnecting in 5 seconds..."
+            })
             await asyncio.sleep(5)
 
-def start_ws_loop(loop, queue):
+def start_ws_loop():
+    loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(websocket_listener(queue))
+    loop.run_until_complete(websocket_listener())
 
-def format_flight_for_table(flight):
-    return [
-        flight["timestamp"],
-        flight["callsign"],
-        flight["aircraft"],
-        flight["departing"],
-        flight["arriving"],
-        flight["flightlevel"]
-    ]
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-# GUI Layout
-sg.theme('DarkBlue3')
+@app.route('/api/flights')
+def get_flights():
+    return jsonify(flights_history[-50:])  # Return last 50 flights
 
-clearance_tab = [
-    [sg.Text("Live Clearances:", font=('Arial', 12, 'bold'))],
-    [sg.Multiline(size=(90, 15), key="-OUTPUT-", autoscroll=True, disabled=True, font=('Courier', 10))]
-]
+@app.route('/api/status')
+def get_status():
+    return jsonify({
+        "connection_status": connection_status,
+        "total_flights": len(flights_history),
+        "status_log": status_log[-10:]  # Return last 10 status messages
+    })
 
-flights_tab = [
-    [sg.Text("Flight History:", font=('Arial', 12, 'bold'))],
-    [sg.Table(values=[], headings=["Time", "Callsign", "Aircraft", "From", "To", "FL"],
-              key="-FLIGHTS-TABLE-", auto_size_columns=True, justification='left',
-              num_rows=20, alternating_row_color='lightblue')],
-    [sg.Button("Clear History"), sg.Button("Export History")]
-]
-
-layout = [
-    [sg.TabGroup([[sg.Tab('Live Clearances', clearance_tab),
-                   sg.Tab('Flight History', flights_tab)]])],
-    [sg.StatusBar("Disconnected", key="-STATUS-", size=(50, 1))],
-    [sg.Button("Exit")]
-]
-
-window = sg.Window("ATC 24 Clearance Generator", layout, resizable=True, finalize=True)
-
-# Start websocket listener in separate thread with its own event loop
-loop = asyncio.new_event_loop()
-ws_thread = threading.Thread(target=start_ws_loop, args=(loop, msg_queue), daemon=True)
-ws_thread.start()
-
-while True:
-    event, values = window.read(timeout=100)
-    
-    if event == sg.WIN_CLOSED or event == "Exit":
-        break
-    
-    if event == "Clear History":
-        flights_history.clear()
-        window["-FLIGHTS-TABLE-"].update(values=[])
-    
-    if event == "Export History":
-        if flights_history:
-            filename = sg.popup_get_file("Save flight history as", save_as=True, 
-                                       file_types=(("JSON Files", "*.json"), ("All Files", "*.*")))
-            if filename:
-                try:
-                    with open(filename, 'w') as f:
-                        json.dump(flights_history, f, indent=2)
-                    sg.popup(f"History exported to {filename}")
-                except Exception as e:
-                    sg.popup_error(f"Error saving file: {e}")
-
-    # Read all messages from queue and update GUI
-    while not msg_queue.empty():
-        msg_type, msg, flight_info = msg_queue.get()
+@app.route('/api/generate_clearance', methods=['POST'])
+def generate_clearance():
+    try:
+        flightplan = request.json
+        clearance = make_clearance(flightplan)
+        timestamp = datetime.now().strftime("%H:%M:%S")
         
-        if msg_type == "[STATUS]":
-            window["-STATUS-"].update("Connected")
-            current = window["-OUTPUT-"].get()
-            window["-OUTPUT-"].update(current + f"\n[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+        flight_info = {
+            "timestamp": timestamp,
+            "callsign": flightplan["callsign"],
+            "aircraft": flightplan["aircraft"],
+            "departing": flightplan["departing"],
+            "arriving": flightplan["arriving"],
+            "flightlevel": flightplan["flightlevel"],
+            "clearance": clearance
+        }
+        flights_history.append(flight_info)
         
-        elif msg_type == "[ERROR]":
-            window["-STATUS-"].update("Error")
-            current = window["-OUTPUT-"].get()
-            window["-OUTPUT-"].update(current + f"\n[{datetime.now().strftime('%H:%M:%S')}] {msg}")
-        
-        elif msg_type == "CLEARANCE":
-            current = window["-OUTPUT-"].get()
-            timestamp = datetime.now().strftime('%H:%M:%S')
-            window["-OUTPUT-"].update(current + f"\n[{timestamp}] {msg}")
-            
-            # Update flights table
-            table_data = [format_flight_for_table(flight) for flight in flights_history[-50:]]  # Show last 50 flights
-            window["-FLIGHTS-TABLE-"].update(values=table_data)
+        return jsonify({"success": True, "clearance": clearance, "flight": flight_info})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
-window.close()
+@app.route('/api/clear_history', methods=['POST'])
+def clear_history():
+    global flights_history
+    flights_history = []
+    return jsonify({"success": True})
+
+@app.route('/api/export_history')
+def export_history():
+    output = io.StringIO()
+    json.dump(flights_history, output, indent=2)
+    output.seek(0)
+    
+    return send_file(
+        io.BytesIO(output.getvalue().encode()),
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=f'flight_history_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    )
+
+if __name__ == '__main__':
+    # Start websocket listener in separate thread
+    ws_thread = threading.Thread(target=start_ws_loop, daemon=True)
+    ws_thread.start()
+    
+    # Start Flask app
+    app.run(host='0.0.0.0', port=5000, debug=False)
