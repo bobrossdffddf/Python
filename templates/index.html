@@ -7,15 +7,63 @@
     <title>ATC Flight Plan Monitor</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #1a1a1a;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
             color: #ffffff;
+            min-height: 100vh;
         }
         .header {
             text-align: center;
             margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #4CAF50, #81C784);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+        }
+        .approval-box {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            padding: 15px;
+            min-width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+        .approval-box h3 {
+            margin-top: 0;
+            color: #4CAF50;
+            text-align: center;
+            border-bottom: 1px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .approved-flight {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(76, 175, 80, 0.2);
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        .approved-flight input[type="checkbox"] {
+            margin-right: 8px;
+            accent-color: #4CAF50;
         }
         .controls {
             display: flex;
@@ -23,6 +71,10 @@
             margin-bottom: 20px;
             flex-wrap: wrap;
             align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
         }
         .control-group {
             display: flex;
@@ -30,94 +82,181 @@
             gap: 5px;
         }
         select, button, input {
-            padding: 8px 12px;
-            border: 1px solid #555;
-            border-radius: 4px;
-            background-color: #333;
+            padding: 10px 15px;
+            border: 2px solid #555;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
             color: #fff;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
         }
         button {
             cursor: pointer;
-            background-color: #007bff;
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
         }
         button:hover {
-            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+        }
+        .map-button {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+        }
+        .map-button:hover {
+            box-shadow: 0 8px 25px rgba(255, 152, 0, 0.4);
         }
         .status {
-            background-color: #2a2a2a;
-            padding: 15px;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
             margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .status-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .timezone-display {
+            color: #81C784;
+            font-weight: 600;
         }
         .flights-container {
-            background-color: #2a2a2a;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
             padding: 20px;
             max-height: 600px;
             overflow-y: auto;
+            backdrop-filter: blur(10px);
         }
         .flight-card {
-            background-color: #333;
-            border: 1px solid #555;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .flight-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: #4CAF50;
         }
         .flight-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         .flight-callsign {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
-            color: #4CAF50;
+            background: linear-gradient(45deg, #4CAF50, #81C784);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .flight-time {
-            color: #888;
+            color: #B0BEC5;
             font-size: 14px;
+            font-weight: 600;
+        }
+        .approve-checkbox {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            transform: scale(1.2);
+            accent-color: #4CAF50;
         }
         .flight-details {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
         .flight-detail {
-            background-color: #444;
-            padding: 8px;
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .flight-detail strong {
+            color: #81C784;
         }
         .clearance {
-            background-color: #2d2d2d;
+            background: rgba(0, 123, 255, 0.1);
             border-left: 4px solid #007bff;
-            padding: 15px;
-            font-family: monospace;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
             white-space: pre-line;
-            border-radius: 4px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
         }
         .new-flight {
             border-left: 4px solid #ff9800;
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(255, 152, 0, 0.3);
+            }
+            50% { 
+                box-shadow: 0 0 30px rgba(255, 152, 0, 0.6);
+            }
         }
-        .connected { color: #4CAF50; }
-        .disconnected { color: #f44336; }
-        .error { color: #ff9800; }
+        .connected { 
+            color: #4CAF50; 
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        .disconnected { 
+            color: #f44336; 
+            text-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+        }
+        .error { 
+            color: #ff9800; 
+            text-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #4CAF50, #81C784);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(45deg, #81C784, #A5D6A7);
+        }
     </style>
 </head>
 <body>
+    <div class="approval-box">
+        <h3>✅ Approved Flights</h3>
+        <div id="approvedFlights">
+            <p style="text-align: center; color: #888; font-size: 12px;">No approvals yet...</p>
+        </div>
+    </div>
+
     <div class="header">
-        <h1>ATC Flight Plan Monitor</h1>
+        <h1>🛩️ ATC Flight Plan Monitor</h1>
     </div>
 
     <div class="controls">
         <div class="control-group">
-            <label>Airport Filter:</label>
+            <label>🏢 Airport Filter:</label>
             <select id="airportFilter">
                 <option value="">All Airports</option>
                 <option value="IBAR">IBAR</option>
@@ -144,15 +283,25 @@
                 <option value="ISKP">ISKP</option>
             </select>
         </div>
-        <button onclick="clearHistory()">Clear History</button>
-        <button onclick="exportHistory()">Export History</button>
-        <button onclick="testBeep()">Test Beep</button>
+        <button onclick="clearHistory()">🗑️ Clear History</button>
+        <button onclick="exportHistory()">📋 Export History</button>
+        <button onclick="testBeep()">🔊 Test Beep</button>
+        <button class="map-button" onclick="openMap()" disabled>🗺️ Map (Coming Soon)</button>
     </div>
 
     <div class="status">
-        <div>Status: <span id="connectionStatus" class="disconnected">Disconnected</span></div>
-        <div>Total Flights: <span id="totalFlights">0</span></div>
-        <div>Filtered Flights: <span id="filteredFlights">0</span></div>
+        <div class="status-item">
+            <div>Status: <span id="connectionStatus" class="disconnected">Disconnected</span></div>
+        </div>
+        <div class="status-item">
+            <div>Total Flights: <span id="totalFlights">0</span></div>
+        </div>
+        <div class="status-item">
+            <div>Filtered Flights: <span id="filteredFlights">0</span></div>
+        </div>
+        <div class="status-item timezone-display">
+            <div>🌍 Your Timezone: <span id="userTimezone"></span></div>
+        </div>
     </div>
 
     <div class="flights-container">
@@ -162,16 +311,22 @@
     </div>
 
     <audio id="beepSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmkgBTCB0PLYiTcIGnDA6eqbTQwLTarlxJlXHBJJnOHyvWocBzSH0fPPdSIEKG/D7+OXQQsRXrTr35ZIFAhJltr1y3kpBil1x+3blEIJEWGx5OOaUgwMU6bn2ZJVGwtJn93xwmQgBC98v+7ilkAJE2jA7++FGj8HHwDOFwL6SAdz9MkuT1YFHDe5EIfUZd7P6+LQHW04HfAINMpd29b3LGnSsUJJFh1y9fASVy8oc9v6yBRJEQKGbehkxE7Q7z2Fz8YSj0pnHLiV6Wgx5eU9tztV6u9Z1xQH8z9s0ujfNKxcj4yd3KPaIhKFk7Dk2Fg04ksKm9CgQA1hJNVi1i0g0nHfcGgH8Dc1mN77aJBNcR8pGqN71LAtNb1lXKNdHn4jEgLfHRLJz0Vxn68gCbCjz8QjZDYCFsKjRCUqNwq2lgNvRJhJFP6tJrKnJnhw3gArHR1qOBBLwGYo5+2Iq1HtQPNK6GGGFQcPZKQ1V7xKOh3dEeR4oEeUjG8BRE5IFP1lQSW8x1N2i6dLIlcl5EFXZ7qGfKhgj4C7FCDR3SFuJwNdOUJJFVdWh7HNhGCHFV7FdJhNfBT9VJFo2uJcWWWJGXqHVvUn8RkqhjR5VCqJoKJY3hhV5KSO+1xhQ2MUe1H9pPNY9vFf+xKyXwJq1q/xXfFNKKojm+VHtB1VaqFf2RtgBdFfqYRgwABAqRsRSVo7rDW3pnhd6Rb9owrB1kF8NRFPW0g4fF/Oe+ZcWa7xVWlwm+JWQs/nMRhqkZ/QAq6JARZhg8t1J1pNXwJpKwxeqhUUn9Cnn+0jBjt8xPDKNjvgMwrJr/mIZDRIYxzKsm6kNUwcqpHyX3JlMp0rYzwJvGn7qQIRTJl6TpJfIGKLXhFg2dPRxqb8tAHIj4LuRjCVIDhCE2VIgBlBOQSKgJ5kGGHVOgmI2fFh9nLCgCpQj8O+nQOGKxkWWMdBWWjE8GWqNALKfQ6BO4QVqwkgW1cTN2VIKiRZNBpEV/eQBi7XfE5LLtVgWRlRjPRqm7pNITUqGCdJYJlFdlE2GhEZERrGd9K7P8tNPLFE" type="audio/wav">
+        <source src="data:audio/wav;base64,UklGRu4BAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YcoBAAC4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4" type="audio/wav">
     </audio>
 
     <script>
         let currentFilter = '';
         let flights = [];
         let lastFlightCount = 0;
+        let approvedFlights = new Set();
+        let userTimezone = '';
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            // Set user's timezone
+            userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            document.getElementById('userTimezone').textContent = userTimezone;
+
             const airportFilter = document.getElementById('airportFilter');
             airportFilter.addEventListener('change', function() {
                 currentFilter = this.value;
@@ -183,6 +338,19 @@
             setInterval(updateData, 2000);
             updateData();
         });
+
+        function formatTimeInUserTimezone(timestamp) {
+            const now = new Date();
+            const today = now.toDateString();
+            const flightTime = new Date(today + ' ' + timestamp);
+            
+            return flightTime.toLocaleTimeString([], {
+                timeZone: userTimezone,
+                hour12: true,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
 
         async function updateData() {
             try {
@@ -247,28 +415,54 @@
 
             flightsList.innerHTML = filteredFlights.reverse().map(flight => `
                 <div class="flight-card ${flight.isNew ? 'new-flight' : ''}">
+                    <input type="checkbox" class="approve-checkbox" onchange="toggleApproval('${flight.callsign}', this.checked)" ${approvedFlights.has(flight.callsign) ? 'checked' : ''}>
                     <div class="flight-header">
                         <div class="flight-callsign">${flight.callsign}</div>
-                        <div class="flight-time">${flight.timestamp}</div>
+                        <div class="flight-time">${formatTimeInUserTimezone(flight.timestamp)}</div>
                     </div>
                     <div class="flight-details">
                         <div class="flight-detail">
-                            <strong>Aircraft:</strong> ${flight.aircraft}
+                            <strong>✈️ Aircraft:</strong><br>${flight.aircraft}
                         </div>
                         <div class="flight-detail">
-                            <strong>Departing:</strong> ${flight.departing}
+                            <strong>🛫 Departing:</strong><br>${flight.departing}
                         </div>
                         <div class="flight-detail">
-                            <strong>Arriving:</strong> ${flight.arriving}
+                            <strong>🛬 Arriving:</strong><br>${flight.arriving}
                         </div>
                         <div class="flight-detail">
-                            <strong>Flight Level:</strong> FL${flight.flightlevel}
+                            <strong>📊 Flight Level:</strong><br>FL${flight.flightlevel}
                         </div>
                     </div>
                     <div class="clearance">
-                        <strong>Clearance:</strong><br>
+                        <strong>📋 Clearance:</strong><br>
                         ${flight.clearance}
                     </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleApproval(callsign, isChecked) {
+            if (isChecked) {
+                approvedFlights.add(callsign);
+            } else {
+                approvedFlights.delete(callsign);
+            }
+            updateApprovalBox();
+        }
+
+        function updateApprovalBox() {
+            const approvedFlightsDiv = document.getElementById('approvedFlights');
+            
+            if (approvedFlights.size === 0) {
+                approvedFlightsDiv.innerHTML = '<p style="text-align: center; color: #888; font-size: 12px;">No approvals yet...</p>';
+                return;
+            }
+
+            approvedFlightsDiv.innerHTML = Array.from(approvedFlights).map(callsign => `
+                <div class="approved-flight">
+                    <input type="checkbox" checked disabled>
+                    <span>${callsign}</span>
                 </div>
             `).join('');
         }
@@ -311,6 +505,11 @@
 
         function testBeep() {
             playBeep();
+        }
+
+        function openMap() {
+            // Placeholder for future map functionality
+            alert('Map feature coming soon! 🗺️');
         }
     </script>
 </body>
