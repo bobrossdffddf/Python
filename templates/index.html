@@ -223,6 +223,13 @@
         .flight-detail strong {
             color: #81C784;
         }
+        .distance-info {
+            background: rgba(255, 152, 0, 0.2);
+            border: 1px solid #ff9800;
+        }
+        .distance-info strong {
+            color: #ff9800;
+        }
         .clearance {
             background: rgba(0, 123, 255, 0.1);
             border-left: 4px solid #007bff;
@@ -607,6 +614,11 @@
                         <div class="flight-detail">
                             <strong>🗺️ Route:</strong><br>${flight.route || 'N/A'}
                         </div>
+                        ${flight.distance_to_destination !== null && flight.distance_to_destination !== undefined ? `
+                        <div class="flight-detail distance-info">
+                            <strong>📍 Distance to ${flight.arriving}:</strong><br>${flight.distance_to_destination} miles
+                        </div>
+                        ` : ''}
                     </div>
                     ${clearanceSection}
                 </div>

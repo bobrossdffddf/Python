@@ -4,12 +4,102 @@ import asyncio
 import websockets
 import threading
 import time
+import math
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_file
 import io
 
 DEFAULT_HEADING = 180
 SLOWDOWN_RATE = 0.02
+
+# Airport coordinates for distance calculations
+AIRPORT_COORDINATES = {
+    'IBAR': {'lat': 25.7617, 'lng': -80.1918},
+    'IHEN': {'lat': 25.7753, 'lng': -80.1348},
+    'ILAR': {'lat': 25.7889, 'lng': -80.2264},
+    'IIAB': {'lat': 25.8067, 'lng': -80.0969},
+    'IPAP': {'lat': 25.6586, 'lng': -80.2878},
+    'IGRV': {'lat': 25.9123, 'lng': -80.1456},
+    'IJAF': {'lat': 25.5434, 'lng': -80.3421},
+    'IZOL': {'lat': 25.7234, 'lng': -80.4123},
+    'ISCM': {'lat': 25.8234, 'lng': -80.3567},
+    'IDCS': {'lat': 25.6789, 'lng': -80.0234},
+    'ITKO': {'lat': 25.9876, 'lng': -80.2345},
+    'ILKL': {'lat': 25.4567, 'lng': -80.1789},
+    'IPPH': {'lat': 25.8901, 'lng': -80.4567},
+    'IGAR': {'lat': 25.3456, 'lng': -80.2890},
+    'IBLT': {'lat': 25.7890, 'lng': -80.0456},
+    'IRFD': {'lat': 25.6123, 'lng': -80.3789},
+    'IMLR': {'lat': 25.9234, 'lng': -80.1234},
+    'ITRC': {'lat': 25.4789, 'lng': -80.4012},
+    'IBTH': {'lat': 25.8567, 'lng': -80.2678},
+    'IUFO': {'lat': 25.7345, 'lng': -80.3456},
+    'ISAU': {'lat': 25.5678, 'lng': -80.0789},
+    'ISKP': {'lat': 25.8012, 'lng': -80.4234}
+}
+
+def convert_ptfs_to_latlng(ptfs_x, ptfs_y):
+    """Convert PTFS coordinates to lat/lng"""
+    center_lat = 25.7617
+    center_lng = -80.1918
+    scale = 0.001
+    
+    lat = center_lat + (ptfs_y * scale)
+    lng = center_lng + (ptfs_x * scale)
+    
+    return lat, lng
+
+def calculate_distance_miles(lat1, lng1, lat2, lng2):
+    """Calculate distance between two points in miles using Haversine formula"""
+    # Convert latitude and longitude from degrees to radians
+    lat1_rad = math.radians(lat1)
+    lng1_rad = math.radians(lng1)
+    lat2_rad = math.radians(lat2)
+    lng2_rad = math.radians(lng2)
+    
+    # Haversine formula
+    dlat = lat2_rad - lat1_rad
+    dlng = lng2_rad - lng1_rad
+    
+    a = math.sin(dlat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlng/2)**2
+    c = 2 * math.asin(math.sqrt(a))
+    
+    # Earth's radius in miles
+    radius_miles = 3959
+    
+    distance = radius_miles * c
+    return distance
+
+def get_aircraft_distance_to_airport(callsign, airport_code):
+    """Get distance from aircraft to destination airport"""
+    global aircraft_data
+    
+    if not aircraft_data or callsign not in aircraft_data:
+        return None
+        
+    if airport_code not in AIRPORT_COORDINATES:
+        return None
+        
+    aircraft = aircraft_data[callsign]
+    if not aircraft.get('position'):
+        return None
+        
+    # Convert PTFS coordinates to lat/lng
+    aircraft_lat, aircraft_lng = convert_ptfs_to_latlng(
+        aircraft['position']['x'], 
+        aircraft['position'].get('z', aircraft['position'].get('y', 0))
+    )
+    
+    # Get airport coordinates
+    airport = AIRPORT_COORDINATES[airport_code]
+    
+    # Calculate distance
+    distance = calculate_distance_miles(
+        aircraft_lat, aircraft_lng,
+        airport['lat'], airport['lng']
+    )
+    
+    return distance
 
 def generate_squawk():
     return "".join(str(random.randint(0, 7)) for _ in range(4))
@@ -131,13 +221,30 @@ def get_flights():
             if flight["arriving"] == current_airport_filter:
                 flight_copy.pop("clearance", None)  # Remove clearance for arriving flights
                 flight_copy["is_arriving_to_filter"] = True  # Mark for red styling
+                
+                # Calculate distance to destination airport for arriving flights
+                distance = get_aircraft_distance_to_airport(flight["callsign"], flight["arriving"])
+                if distance is not None:
+                    flight_copy["distance_to_destination"] = round(distance, 1)
+                else:
+                    flight_copy["distance_to_destination"] = None
             else:
                 flight_copy["is_arriving_to_filter"] = False
+                flight_copy["distance_to_destination"] = None
             flights_to_return.append(flight_copy)
     else:
         flights_to_return = [flight.copy() for flight in flights_history[-50:]]
         for flight in flights_to_return:
             flight["is_arriving_to_filter"] = False
+            # For non-filtered view, still calculate distance for arriving flights
+            if aircraft_data:
+                distance = get_aircraft_distance_to_airport(flight["callsign"], flight["arriving"])
+                if distance is not None:
+                    flight["distance_to_destination"] = round(distance, 1)
+                else:
+                    flight["distance_to_destination"] = None
+            else:
+                flight["distance_to_destination"] = None
     
     return jsonify(flights_to_return)
 
