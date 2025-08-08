@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,6 +50,17 @@
             text-align: center;
             border-bottom: 1px solid #4CAF50;
             padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .collapse-button {
+            background: none;
+            border: none;
+            color: #4CAF50;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0 5px;
         }
         .approved-flight {
             display: flex;
@@ -243,8 +253,8 @@
     </style>
 </head>
 <body>
-    <div class="approval-box">
-        <h3>✅ Approved Flights</h3>
+    <div class="approval-box" id="approvalBox">
+        <h3>✅ Approved Flights <button class="collapse-button" onclick="toggleApprovalBox()"><span id="collapseIcon">▼</span></button></h3>
         <div id="approvedFlights">
             <p style="text-align: center; color: #888; font-size: 12px;">No approvals yet...</p>
         </div>
@@ -311,7 +321,7 @@
     </div>
 
     <audio id="beepSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRu4BAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YcoBAAC4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4" type="audio/wav">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIuGDSg2vLTeSIFJH3M8N2NSgcXbrDp56RXFgpJnN3uvmkuGDKdzPDUjEALDl+59+2PQQxOu+Xwtl8dBjGO1PLTEDKd0O/Pm0oUBFux7+mfRAwNZr3d5LJqGRJQj9jzvmEhGzaJ0/LNdSUGI3nK8d2OOwwVaLPp36hWGQdQo+L3wmIhBTOd0PLNeCUHInbF8N2RTwkRX7/u47hUGglQnOH1vWIfGzWayvPRjT4LEl6979mXQQkOYrjq8KhaGAlbpN/vpGItGTOYwvTpjEITEV+17+CJPRQNY7br8adTFQp7qN318pt0GwxblPf723JUGwdZofnC2WtEEQUXgtP6s3A5BjGM5P6xZCsNOIjd/bJgIgMWgN7/rHJYGghEltv2x28oNWe95/+qaS0MAYjd8e6zZS0GKnfH6vOmUSsFe7Tp/MV5JBgOvOLw0yU5MQAQ1+LhtmcSDzWe1uxlbiwBhvH6yKFdJggxjePsol8fCjWP4vC7aDcGJ2nD8OR4OQMqkOj4uV0aDjSe4/K3aywFL2XC8OR4OQUdl+b8umYvGSuN4fC8aDYNJVG77eWBRS4EGZna9LlnMRYjjeHyslwmCi2I4PK5ZysFGI3j9r5nKhgqjeL0umYtAhqM5fO7ZCkGJ4ji8rtoPgMhjeTwuWQrBiOH4vO7ZywOJ4vl9Lw=" type="audio/wav">
     </audio>
 
     <script>
@@ -320,6 +330,7 @@
         let lastFlightCount = 0;
         let approvedFlights = new Set();
         let userTimezone = '';
+        let isApprovalBoxCollapsed = false;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -343,7 +354,7 @@
             const now = new Date();
             const today = now.toDateString();
             const flightTime = new Date(today + ' ' + timestamp);
-            
+
             return flightTime.toLocaleTimeString([], {
                 timeZone: userTimezone,
                 hour12: true,
@@ -357,7 +368,7 @@
                 // Get flights
                 const flightsResponse = await fetch('/api/flights');
                 const newFlights = await flightsResponse.json();
-                
+
                 // Check for new flights to monitored airport
                 if (currentFilter && newFlights.length > lastFlightCount) {
                     const newFlightPlans = newFlights.slice(lastFlightCount);
@@ -373,14 +384,14 @@
                         }
                     }
                 }
-                
+
                 flights = newFlights;
                 lastFlightCount = flights.length;
-                
+
                 // Get status
                 const statusResponse = await fetch('/api/status');
                 const status = await statusResponse.json();
-                
+
                 updateStatus(status);
                 displayFlights();
             } catch (error) {
@@ -392,7 +403,7 @@
             const statusElement = document.getElementById('connectionStatus');
             statusElement.textContent = status.connection_status;
             statusElement.className = status.connection_status.toLowerCase();
-            
+
             document.getElementById('totalFlights').textContent = status.total_flights;
         }
 
@@ -453,7 +464,7 @@
 
         function updateApprovalBox() {
             const approvedFlightsDiv = document.getElementById('approvedFlights');
-            
+
             if (approvedFlights.size === 0) {
                 approvedFlightsDiv.innerHTML = '<p style="text-align: center; color: #888; font-size: 12px;">No approvals yet...</p>';
                 return;
@@ -465,6 +476,20 @@
                     <span>${callsign}</span>
                 </div>
             `).join('');
+        }
+
+        function toggleApprovalBox() {
+            const approvalBoxContent = document.getElementById('approvedFlights');
+            const collapseIcon = document.getElementById('collapseIcon');
+
+            if (isApprovalBoxCollapsed) {
+                approvalBoxContent.style.display = 'block';
+                collapseIcon.textContent = '▼';
+            } else {
+                approvalBoxContent.style.display = 'none';
+                collapseIcon.textContent = '▶';
+            }
+            isApprovalBoxCollapsed = !isApprovalBoxCollapsed;
         }
 
         async function setAirportFilter(airport) {
