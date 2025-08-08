@@ -245,6 +245,15 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        .distance-highlight {
+            background: rgba(255, 235, 59, 0.2) !important;
+            border: 2px solid #ffeb3b;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 5px rgba(255, 235, 59, 0.5); }
+            to { box-shadow: 0 0 15px rgba(255, 235, 59, 0.8); }
+        }
         @keyframes pulse {
             0%, 100% { 
                 box-shadow: 0 0 20px rgba(255, 152, 0, 0.3);
@@ -584,6 +593,13 @@
                     </div>
                 ` : '';
                 
+                // Distance section for arriving flights
+                const distanceSection = isArrivingToFilter && flight.distance_to_airport ? `
+                    <div class="flight-detail distance-highlight">
+                        <strong>📏 Distance to Airport:</strong><br>${flight.distance_to_airport.toLocaleString()} feet
+                    </div>
+                ` : '';
+                
                 return `
                 <div class="flight-card ${flight.isNew ? 'new-flight' : ''} ${isArrivingToFilter ? 'arriving-flight' : ''}">
                     <input type="checkbox" class="approve-checkbox" onchange="toggleApproval('${flight.callsign}', this.checked)" ${approvedFlights.has(flight.callsign) ? 'checked' : ''}>
@@ -607,6 +623,7 @@
                         <div class="flight-detail">
                             <strong>🗺️ Route:</strong><br>${flight.route || 'N/A'}
                         </div>
+                        ${distanceSection}
                     </div>
                     ${clearanceSection}
                 </div>

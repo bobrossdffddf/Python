@@ -4,12 +4,56 @@ import asyncio
 import websockets
 import threading
 import time
+import math
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_file
 import io
 
 DEFAULT_HEADING = 180
 SLOWDOWN_RATE = 0.02
+
+# Airport coordinates in PTFS coordinate system
+AIRPORT_COORDINATES = {
+    'IBAR': {'x': -1250, 'z': 2100},
+    'IHEN': {'x': -890, 'z': 1890},
+    'ILAR': {'x': -1540, 'z': 2250},
+    'IIAB': {'x': -720, 'z': 1750},
+    'IPAP': {'x': -2100, 'z': 2890},
+    'IGRV': {'x': -980, 'z': 1560},
+    'IJAF': {'x': -2450, 'z': 3210},
+    'IZOL': {'x': -2890, 'z': 2780},
+    'ISCM': {'x': -2340, 'z': 2100},
+    'IDCS': {'x': -450, 'z': 2690},
+    'ITKO': {'x': -1670, 'z': 1340},
+    'ILKL': {'x': -1234, 'z': 3450},
+    'IPPH': {'x': -3200, 'z': 2100},
+    'IGAR': {'x': -2100, 'z': 3890},
+    'IBLT': {'x': -560, 'z': 2340},
+    'IRFD': {'x': -2780, 'z': 3100},
+    'IMLR': {'x': -890, 'z': 1450},
+    'ITRC': {'x': -2890, 'z': 4100},
+    'IBTH': {'x': -1890, 'z': 2450},
+    'IUFO': {'x': -2560, 'z': 3200},
+    'ISAU': {'x': -670, 'z': 3100},
+    'ISKP': {'x': -3100, 'z': 4000}
+}
+
+def calculate_distance_to_airport(aircraft_pos, airport_code):
+    """Calculate distance from aircraft to airport in feet"""
+    if airport_code not in AIRPORT_COORDINATES:
+        return None
+    
+    airport_pos = AIRPORT_COORDINATES[airport_code]
+    
+    # Calculate distance in PTFS units
+    dx = aircraft_pos.get('x', 0) - airport_pos['x']
+    dz = aircraft_pos.get('z', 0) - airport_pos['z']
+    distance_ptfs = math.sqrt(dx*dx + dz*dz)
+    
+    # Convert PTFS units to feet (approximate scale: 1 PTFS unit = ~3.28 feet)
+    distance_feet = distance_ptfs * 3.28
+    
+    return int(distance_feet)
 
 def generate_squawk():
     return "".join(str(random.randint(0, 7)) for _ in range(4))
@@ -131,6 +175,13 @@ def get_flights():
             if flight["arriving"] == current_airport_filter:
                 flight_copy.pop("clearance", None)  # Remove clearance for arriving flights
                 flight_copy["is_arriving_to_filter"] = True  # Mark for red styling
+                
+                # Add distance calculation if aircraft data is available
+                if flight["callsign"] in aircraft_data and "position" in aircraft_data[flight["callsign"]]:
+                    aircraft_pos = aircraft_data[flight["callsign"]]["position"]
+                    distance = calculate_distance_to_airport(aircraft_pos, current_airport_filter)
+                    if distance is not None:
+                        flight_copy["distance_to_airport"] = distance
             else:
                 flight_copy["is_arriving_to_filter"] = False
             flights_to_return.append(flight_copy)
