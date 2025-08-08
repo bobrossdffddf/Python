@@ -593,10 +593,16 @@
                     </div>
                 ` : '';
                 
-                // Distance section for arriving flights
-                const distanceSection = isArrivingToFilter && flight.distance_to_airport ? `
+                // Distance sections for departing and arriving airports
+                const departingDistanceSection = flight.distance_to_departing ? `
                     <div class="flight-detail distance-highlight">
-                        <strong>📏 Distance to Airport:</strong><br>${flight.distance_to_airport.toLocaleString()} feet
+                        <strong>📏 Distance from ${flight.departing}:</strong><br>${flight.distance_to_departing.toLocaleString()} feet
+                    </div>
+                ` : '';
+                
+                const arrivingDistanceSection = flight.distance_to_arriving ? `
+                    <div class="flight-detail distance-highlight">
+                        <strong>📏 Distance to ${flight.arriving}:</strong><br>${flight.distance_to_arriving.toLocaleString()} feet
                     </div>
                 ` : '';
                 
@@ -623,7 +629,8 @@
                         <div class="flight-detail">
                             <strong>🗺️ Route:</strong><br>${flight.route || 'N/A'}
                         </div>
-                        ${distanceSection}
+                        ${departingDistanceSection}
+                        ${arrivingDistanceSection}
                     </div>
                     ${clearanceSection}
                 </div>

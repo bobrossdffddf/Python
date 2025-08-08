@@ -39,19 +39,24 @@ AIRPORT_COORDINATES = {
 }
 
 def calculate_distance_to_airport(aircraft_pos, airport_code):
-    """Calculate distance from aircraft to airport in feet"""
+    """Calculate distance from aircraft to airport in feet using real PTFS coordinates"""
     if airport_code not in AIRPORT_COORDINATES:
         return None
     
     airport_pos = AIRPORT_COORDINATES[airport_code]
     
-    # Calculate distance in PTFS units
-    dx = aircraft_pos.get('x', 0) - airport_pos['x']
-    dz = aircraft_pos.get('z', 0) - airport_pos['z']
-    distance_ptfs = math.sqrt(dx*dx + dz*dz)
+    # Use real PTFS coordinates from WebSocket (position.x and position.y)
+    # Note: In PTFS, -y is North, -x is West
+    aircraft_x = aircraft_pos.get('x', 0)
+    aircraft_y = aircraft_pos.get('y', 0)
     
-    # Convert PTFS units to feet (approximate scale: 1 PTFS unit = ~3.28 feet)
-    distance_feet = distance_ptfs * 3.28
+    # Calculate distance in studs
+    dx = aircraft_x - airport_pos['x']
+    dy = aircraft_y - airport_pos['z']  # Using z for airport y-coordinate
+    distance_studs = math.sqrt(dx*dx + dy*dy)
+    
+    # Convert studs to feet (1 stud = 1.8372 ft according to the API docs)
+    distance_feet = distance_studs * 1.8372
     
     return int(distance_feet)
 
@@ -168,27 +173,32 @@ def index():
 def get_flights():
     flights_to_return = []
     
-    # If filtering is active, remove clearance for arriving flights to the filtered airport
-    if current_airport_filter:
-        for flight in flights_history[-50:]:
-            flight_copy = flight.copy()
+    # Add distance calculation for all flights with position data
+    for flight in flights_history[-50:]:
+        flight_copy = flight.copy()
+        
+        # Add distance to departing airport for all flights with position data
+        if flight["callsign"] in aircraft_data and "position" in aircraft_data[flight["callsign"]]:
+            aircraft_pos = aircraft_data[flight["callsign"]]["position"]
+            departing_distance = calculate_distance_to_airport(aircraft_pos, flight["departing"])
+            arriving_distance = calculate_distance_to_airport(aircraft_pos, flight["arriving"])
+            
+            if departing_distance is not None:
+                flight_copy["distance_to_departing"] = departing_distance
+            if arriving_distance is not None:
+                flight_copy["distance_to_arriving"] = arriving_distance
+        
+        # Handle filtering logic
+        if current_airport_filter:
             if flight["arriving"] == current_airport_filter:
                 flight_copy.pop("clearance", None)  # Remove clearance for arriving flights
                 flight_copy["is_arriving_to_filter"] = True  # Mark for red styling
-                
-                # Add distance calculation if aircraft data is available
-                if flight["callsign"] in aircraft_data and "position" in aircraft_data[flight["callsign"]]:
-                    aircraft_pos = aircraft_data[flight["callsign"]]["position"]
-                    distance = calculate_distance_to_airport(aircraft_pos, current_airport_filter)
-                    if distance is not None:
-                        flight_copy["distance_to_airport"] = distance
             else:
                 flight_copy["is_arriving_to_filter"] = False
-            flights_to_return.append(flight_copy)
-    else:
-        flights_to_return = [flight.copy() for flight in flights_history[-50:]]
-        for flight in flights_to_return:
-            flight["is_arriving_to_filter"] = False
+        else:
+            flight_copy["is_arriving_to_filter"] = False
+            
+        flights_to_return.append(flight_copy)
     
     return jsonify(flights_to_return)
 
