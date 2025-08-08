@@ -82,7 +82,6 @@ async def websocket_listener():
                                 "arriving": flightplan["arriving"],
                                 "flightlevel": flightplan["flightlevel"],
                                 "route": flightplan.get("route", "N/A"),
-                                "squawk": squawk,
                                 "clearance": clearance
                             }
                             flights_history.append(flight_info)
@@ -123,9 +122,16 @@ def index():
 
 @app.route('/api/flights')
 def get_flights():
-    # In a real implementation, this would check the airport filter.
-    # For now, we return the last 50 flights.
-    return jsonify(flights_history[-50:])
+    flights_to_return = flights_history[-50:].copy()
+    
+    # If filtering is active, remove clearance for arriving flights to the filtered airport
+    if current_airport_filter:
+        for flight in flights_to_return:
+            if flight["arriving"] == current_airport_filter:
+                flight = flight.copy()  # Don't modify the original
+                flight.pop("clearance", None)  # Remove clearance
+    
+    return jsonify(flights_to_return)
 
 @app.route('/api/status')
 def get_status():
@@ -202,24 +208,26 @@ def export_history():
         download_name=f'flight_history_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
     )
 
+# Global variable to store current filter
+current_airport_filter = None
+
 @app.route('/api/set_airport_filter', methods=['POST'])
 def set_airport_filter():
-    # This endpoint would be used by the frontend to set the user's preferred airport.
-    # The actual mechanism would involve setting a cookie or using a session.
-    # For this example, we'll just acknowledge the request.
+    global current_airport_filter
     data = request.json
     airport_code = data.get("airport_code")
     if airport_code:
-        # In a real app, you'd set a cookie here.
-        # response = make_response(jsonify({"success": True}))
-        # response.set_cookie('airport_filter', airport_code)
-        # return response
+        current_airport_filter = airport_code
         status_log.append({
             "timestamp": datetime.now().strftime("%H:%M:%S"),
             "message": f"Airport filter set to: {airport_code}"
         })
         return jsonify({"success": True, "message": f"Filter set for {airport_code}"})
     return jsonify({"success": False, "message": "No airport code provided"}), 400
+
+@app.route('/api/get_airport_filter')
+def get_airport_filter():
+    return jsonify({"filter": current_airport_filter})
 
 @app.route('/api/aircraft')
 def get_aircraft():
