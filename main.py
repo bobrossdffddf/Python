@@ -24,7 +24,7 @@ def make_clearance(flightplan):
         f"{callsign}, cleared IRF to {arriving} airport as filed.\n"
         f"Clear for runway ___.\n"  # Added "Clear for runway ___"
         f"Climb and maintain {flightlevel * 100} feet.\n"
-        f"After departure maintain {DEFAULT_HEADING} heading\n"
+        f"After departure maintain  heading\n"
         f"Squawk {squawk}.\n"
     )
 
