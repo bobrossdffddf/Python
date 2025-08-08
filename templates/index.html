@@ -110,13 +110,13 @@
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
         }
-        
+
         select option {
             background: #1a1a2e;
             color: #fff;
             border: none;
         }
-        
+
         select:focus {
             border-color: #4CAF50;
             outline: none;
@@ -381,6 +381,134 @@
             fill: none;
             opacity: 0.7;
         }
+
+        /* Pilot Mode Styles */
+        .pilot-mode-container {
+            position: fixed;
+            top: 50px;
+            right: 20px;
+            width: 400px;
+            max-height: 80vh;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #ff9800;
+            border-radius: 15px;
+            padding: 20px;
+            z-index: 2500;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            display: none; /* Hidden by default */
+            overflow-y: auto;
+            color: #fff;
+        }
+        .pilot-mode-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ff9800;
+            padding-bottom: 10px;
+        }
+        .pilot-mode-header h3 {
+            margin: 0;
+            color: #ff9800;
+            font-size: 20px;
+        }
+        .close-pilot-mode-btn {
+            background: #f44336;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .pilot-mode-content label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ccc;
+            font-weight: bold;
+        }
+        .pilot-mode-content input[type="text"],
+        .pilot-mode-content textarea,
+        .pilot-mode-content button {
+            width: calc(100% - 20px);
+            margin-bottom: 15px;
+            padding: 12px 10px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            backdrop-filter: blur(5px);
+        }
+        .pilot-mode-content textarea {
+            min-height: 100px;
+            resize: vertical;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+        }
+        .pilot-mode-content button {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            border: none;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        .pilot-mode-content button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 152, 0, 0.4);
+        }
+        .route-info, .clearance-section, .utility-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .route-info h4, .clearance-section h4, .utility-section h4 {
+            margin-top: 0;
+            color: #ff9800;
+            border-bottom: 1px solid #ff9800;
+            padding-bottom: 8px;
+        }
+        .route-details span, .utility-buttons button {
+            margin-right: 10px;
+            font-size: 12px;
+        }
+        .utility-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .utility-buttons button {
+            padding: 8px 12px;
+            font-size: 12px;
+            background: rgba(255, 152, 0, 0.2);
+            border: 1px solid #ff9800;
+        }
+        .utility-buttons button:hover {
+            background: rgba(255, 152, 0, 0.4);
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Map button in controls */
+        .controls button.map-button {
+            background: linear-gradient(45deg, #00bcd4, #00acc1);
+            box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);
+        }
+        .controls button.map-button:hover {
+            box-shadow: 0 8px 25px rgba(0, 188, 212, 0.4);
+        }
+
+        /* Pilot mode button in controls */
+        .controls button.pilot-mode-button {
+            background: linear-gradient(45deg, #ffeb3b, #fbc02d);
+            box-shadow: 0 4px 15px rgba(255, 235, 59, 0.3);
+            color: #333; /* Darker text for contrast */
+        }
+        .controls button.pilot-mode-button:hover {
+            box-shadow: 0 8px 25px rgba(255, 235, 59, 0.4);
+        }
+
     </style>
 </head>
 <body>
@@ -430,6 +558,7 @@
         </div>
         <button onclick="clearHistory()">🗑️ Clear History</button>
         <button class="map-button" onclick="openMap()">🗺️ Live Map</button>
+        <button class="pilot-mode-button" onclick="openPilotMode()">🧑‍✈️ Pilot Mode</button>
     </div>
 
     <div class="status">
@@ -462,6 +591,50 @@
         </div>
     </div>
 
+    <!-- Pilot Mode Container (initially hidden) -->
+    <div id="pilotContainer" class="pilot-mode-container">
+        <div class="pilot-mode-header">
+            <h3>🧑‍✈️ Pilot Mode Tools</h3>
+            <button onclick="closePilotMode()" class="close-pilot-mode-btn">✖️</button>
+        </div>
+        <div class="pilot-mode-content">
+            <div class="route-info">
+                <h4>Route Information</h4>
+                <label for="routeInput">Enter Route (e.g., IGRV-IBAR):</label>
+                <input type="text" id="routeInput" placeholder="DEPARTURE-ARRIVAL">
+                <div class="route-details" style="text-align: center; margin-top: 10px;">
+                    Departure: <span id="depAirport">-</span> | Arrival: <span id="arrAirport">-</span> | Distance: <span id="routeDistance">-</span> | Est. Time: <span id="routeTime">-</span>
+                </div>
+                <div id="routeMap" style="height: 150px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-top: 15px;">
+                    <p style="text-align: center; padding-top: 60px; color: #ccc;">Enter a route to visualize</p>
+                </div>
+                <div class="utility-buttons" style="margin-top: 15px;">
+                    <button onclick="generateRouteMap()">Update Route</button>
+                    <button onclick="copyCoordinates()">Copy Coordinates</button>
+                    <button onclick="calculateFuelBurn()">Fuel Calc</button>
+                    <button onclick="getWeatherInfo()">Weather</button>
+                    <button onclick="calculateETA()">Calc ETA</button>
+                    <button onclick="getAltitudeAdvice()">Altitude Advice</button>
+                    <button onclick="exportFlightPlan()">Export Plan</button>
+                </div>
+            </div>
+            <div class="clearance-section">
+                <h4>Active Clearances</h4>
+                <textarea id="activeClearances" readonly placeholder="Clearances will appear here based on selected route or filtered flights..."></textarea>
+                <div class="utility-buttons">
+                    <button onclick="copyClearances()">Copy Clearances</button>
+                </div>
+            </div>
+            <div class="utility-section">
+                <h4>General Utilities</h4>
+                <div class="utility-buttons">
+                    <button onclick="getInstructions()">View Instructions</button>
+                    <button onclick="copyInstructions()">Copy Instructions</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="flights-container">
         <div id="flightsList">
             <p style="text-align: center; color: #888;">No flight plans yet...</p>
@@ -480,6 +653,19 @@
         let map = null;
         let aircraftMarkers = {};
         let aircraftTrails = {};
+        let isPilotModeOpen = false; // State for pilot mode
+
+        // Dummy data for AIRPORT_COORDINATES for route calculations
+        const AIRPORT_COORDINATES = {
+            "IBAR": {"x":-500, "z":-200}, "IHEN": {"x":-300, "z":-150}, "ILAR": {"x":-600, "z":-300},
+            "IIAB": {"x":-100, "z":-50}, "IPAP": {"x":-800, "z":-500}, "IGRV": {"x":-400, "z":-250},
+            "IJAF": {"x":-900, "z":-600}, "IZOL": {"x":-1000, "z":-700}, "ISCM": {"x":-1100, "z":-800},
+            "IDCS": {"x":-200, "z":-100}, "ITKO": {"x":-700, "z":-400}, "ILKL": {"x":-1200, "z":-900},
+            "IPPH": {"x":-1300, "z":-1000}, "IGAR": {"x":-1400, "z":-1100}, "IBLT": {"x":-1500, "z":-1200},
+            "IRFD": {"x":-1600, "z":-1300}, "IMLR": {"x":-1700, "z":-1400}, "ITRC": {"x":-1800, "z":-1500},
+            "IBTH": {"x":-1900, "z":-1600}, "IUFO": {"x":-2000, "z":-1700}, "ISAU": {"x":-2100, "z":-1800},
+            "ISKP": {"x":-2200, "z":-1900}
+        };
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -498,6 +684,18 @@
             const runwayInput = document.getElementById('runwayInput');
             runwayInput.addEventListener('input', function() {
                 updateRunwayForAllFlights(this.value);
+            });
+
+            // Handle route input changes for pilot mode
+            document.getElementById('routeInput').addEventListener('input', function() {
+                // Clear previous route info if input changes before generating
+                if (this.value.trim() === '') {
+                    document.getElementById('depAirport').textContent = '-';
+                    document.getElementById('arrAirport').textContent = '-';
+                    document.getElementById('routeDistance').textContent = '-';
+                    document.getElementById('routeTime').textContent = '-';
+                    document.getElementById('routeMap').innerHTML = '<p style="text-align: center; padding-top: 60px; color: #ccc;">Enter a route to visualize</p>';
+                }
             });
 
             // Start polling for updates
@@ -592,20 +790,20 @@
                         ${flight.clearance}
                     </div>
                 ` : '';
-                
+
                 // Distance sections for departing and arriving airports
                 const departingDistanceSection = flight.distance_to_departing ? `
                     <div class="flight-detail distance-highlight">
                         <strong>📏 Distance from ${flight.departing}:</strong><br>${flight.distance_to_departing.toLocaleString()} feet
                     </div>
                 ` : '';
-                
+
                 const arrivingDistanceSection = flight.distance_to_arriving ? `
                     <div class="flight-detail distance-highlight">
                         <strong>📏 Distance to ${flight.arriving}:</strong><br>${flight.distance_to_arriving.toLocaleString()} feet
                     </div>
                 ` : '';
-                
+
                 return `
                 <div class="flight-card ${flight.isNew ? 'new-flight' : ''} ${isArrivingToFilter ? 'arriving-flight' : ''}">
                     <input type="checkbox" class="approve-checkbox" onchange="toggleApproval('${flight.callsign}', this.checked)" ${approvedFlights.has(flight.callsign) ? 'checked' : ''}>
@@ -692,7 +890,7 @@
 
         async function updateRunwayForAllFlights(runway) {
             if (!runway) runway = '___';
-            
+
             try {
                 await fetch('/api/update_runway', {
                     method: 'POST',
@@ -720,41 +918,41 @@
             }
         }
 
-        
+
 
         function playNotificationSound() {
             try {
                 // Create a pleasant beeping notification sound
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
+
                 // First beep
                 const oscillator1 = audioContext.createOscillator();
                 const gainNode1 = audioContext.createGain();
-                
+
                 oscillator1.connect(gainNode1);
                 gainNode1.connect(audioContext.destination);
-                
+
                 oscillator1.frequency.setValueAtTime(800, audioContext.currentTime);
                 gainNode1.gain.setValueAtTime(0.3, audioContext.currentTime);
                 gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-                
+
                 oscillator1.start(audioContext.currentTime);
                 oscillator1.stop(audioContext.currentTime + 0.2);
-                
+
                 // Second beep
                 const oscillator2 = audioContext.createOscillator();
                 const gainNode2 = audioContext.createGain();
-                
+
                 oscillator2.connect(gainNode2);
                 gainNode2.connect(audioContext.destination);
-                
+
                 oscillator2.frequency.setValueAtTime(1000, audioContext.currentTime + 0.3);
                 gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.3);
                 gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-                
+
                 oscillator2.start(audioContext.currentTime + 0.3);
                 oscillator2.stop(audioContext.currentTime + 0.5);
-                
+
                 console.log('Notification sound played');
             } catch (error) {
                 console.error('Error playing notification sound:', error);
@@ -809,7 +1007,7 @@
 
             // Custom map overlays
             const customOverlays = {};
-            
+
             // Load custom SVG overlay if available
             try {
                 const svgOverlay = L.svgOverlay('/static/maps/example_airport.svg', [[25.0, -80.2], [25.1, -80.0]]);
@@ -957,6 +1155,262 @@
                 `;
                 aircraftMarkers[callsign].setPopupContent(popupContent);
             });
+        }
+
+        // Pilot Mode Functions
+        function openPilotMode() {
+            const pilotContainer = document.getElementById('pilotContainer');
+            pilotContainer.style.display = 'block';
+            isPilotModeOpen = true;
+
+            // Load active clearances from current flights
+            updateActiveClearances();
+        }
+
+        function closePilotMode() {
+            const pilotContainer = document.getElementById('pilotContainer');
+            pilotContainer.style.display = 'none';
+            isPilotModeOpen = false;
+        }
+
+        function updateActiveClearances() {
+            const clearancesDiv = document.getElementById('activeClearances');
+            let clearanceText = '';
+
+            // Get clearances from filtered flights
+            let relevantFlights = flights;
+            if (currentFilter) {
+                relevantFlights = flights.filter(flight => 
+                    flight.departing === currentFilter || flight.arriving === currentFilter
+                );
+            }
+
+            if (relevantFlights.length === 0) {
+                clearanceText = 'No active clearances. Select a flight from the main page to view clearances here.';
+            } else {
+                relevantFlights.slice(-5).forEach(flight => {
+                    if (flight.clearance) {
+                        clearanceText += `${flight.callsign} (${flight.timestamp}):\n${flight.clearance}\n\n`;
+                    }
+                });
+            }
+
+            clearancesDiv.textContent = clearanceText || 'No clearances available.';
+        }
+
+        function generateRouteMap() {
+            const routeInput = document.getElementById('routeInput').value.trim();
+            const routeMapDiv = document.getElementById('routeMap');
+
+            if (!routeInput) {
+                routeMapDiv.textContent = 'Please enter a route (e.g., IGRV-IBAR)';
+                return;
+            }
+
+            const routeParts = routeInput.split('-');
+            if (routeParts.length < 2) {
+                routeMapDiv.textContent = 'Invalid route format. Use format: DEPARTURE-ARRIVAL';
+                return;
+            }
+
+            const departure = routeParts[0].trim().toUpperCase();
+            const arrival = routeParts[1].trim().toUpperCase();
+
+            // Update route information
+            document.getElementById('depAirport').textContent = departure;
+            document.getElementById('arrAirport').textContent = arrival;
+
+            // Calculate distance if airports exist
+            if (AIRPORT_COORDINATES[departure] && AIRPORT_COORDINATES[arrival]) {
+                const depCoords = AIRPORT_COORDINATES[departure];
+                const arrCoords = AIRPORT_COORDINATES[arrival];
+
+                const dx = arrCoords.x - depCoords.x;
+                const dy = arrCoords.z - depCoords.z;
+                const distanceStuds = Math.sqrt(dx*dx + dy*dy);
+                const distanceNM = distanceStuds / 3307.14286; // Convert to nautical miles
+
+                document.getElementById('routeDistance').textContent = `${Math.round(distanceNM)} NM`;
+
+                // Estimate flight time (assuming 300 knots average)
+                const timeHours = distanceNM / 300;
+                const hours = Math.floor(timeHours);
+                const minutes = Math.round((timeHours - hours) * 60);
+                document.getElementById('routeTime').textContent = `${hours}h ${minutes}m`;
+            }
+
+            // Create simple route visualization
+            routeMapDiv.innerHTML = `
+                <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 80%; margin-bottom: 20px;">
+                        <div style="background: #4CAF50; padding: 10px; border-radius: 5px; color: white; font-weight: bold;">
+                            🛫 ${departure}
+                        </div>
+                        <div style="flex: 1; height: 2px; background: linear-gradient(90deg, #4CAF50, #f44336); margin: 0 20px; position: relative;">
+                            <div style="position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: #ff9800; padding: 5px; border-radius: 3px; font-size: 10px;">
+                                ✈️ Route
+                            </div>
+                        </div>
+                        <div style="background: #f44336; padding: 10px; border-radius: 5px; color: white; font-weight: bold;">
+                            🛬 ${arrival}
+                        </div>
+                    </div>
+                    <div style="font-size: 12px; color: #ccc; text-align: center;">
+                        Route: ${departure} → ${arrival}<br>
+                        Click "Copy Coordinates" for detailed waypoints
+                    </div>
+                </div>
+            `;
+        }
+
+        function copyClearances() {
+            const clearancesText = document.getElementById('activeClearances').textContent;
+            navigator.clipboard.writeText(clearancesText).then(() => {
+                alert('Clearances copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy clearances:', err);
+            });
+        }
+
+        function calculateFuelBurn() {
+            const routeInput = document.getElementById('routeInput').value.trim();
+            if (!routeInput) {
+                alert('Please enter a route first!');
+                return;
+            }
+
+            const routeParts = routeInput.split('-');
+            if (routeParts.length >= 2) {
+                const departure = routeParts[0].trim().toUpperCase();
+                const arrival = routeParts[1].trim().toUpperCase();
+
+                if (AIRPORT_COORDINATES[departure] && AIRPORT_COORDINATES[arrival]) {
+                    const depCoords = AIRPORT_COORDINATES[departure];
+                    const arrCoords = AIRPORT_COORDINATES[arrival];
+
+                    const dx = arrCoords.x - depCoords.x;
+                    const dy = arrCoords.z - depCoords.z;
+                    const distanceStuds = Math.sqrt(dx*dx + dy*dy);
+                    const distanceNM = distanceStuds / 3307.14286;
+
+                    // Rough fuel calculation (gallons per hour for typical aircraft)
+                    const avgFuelBurn = 25; // gallons per hour
+                    const avgSpeed = 300; // knots
+                    const flightTime = distanceNM / avgSpeed;
+                    const fuelNeeded = flightTime * avgFuelBurn;
+                    const fuelWithReserve = fuelNeeded * 1.3; // 30% reserve
+
+                    alert(`Fuel Calculation for ${departure} → ${arrival}:\n\nDistance: ${Math.round(distanceNM)} NM\nFlight Time: ${Math.round(flightTime * 60)} minutes\nFuel Required: ${Math.round(fuelNeeded)} gallons\nWith 30% Reserve: ${Math.round(fuelWithReserve)} gallons`);
+                } else {
+                    alert('Unknown airport in route. Please check airport codes.');
+                }
+            }
+        }
+
+        function getWeatherInfo() {
+            alert('Weather Information:\n\n• Check current METAR/TAF reports\n• Monitor wind conditions at departure/arrival\n• Review visibility and ceiling requirements\n• Check for any weather-related NOTAMs\n• Consider alternate airports if needed\n\nNote: This is a simulation - check real weather services for actual flights.');
+        }
+
+        function calculateETA() {
+            const routeInput = document.getElementById('routeInput').value.trim();
+            if (!routeInput) {
+                alert('Please enter a route first!');
+                return;
+            }
+
+            const now = new Date();
+            const etaText = document.getElementById('routeTime').textContent;
+
+            if (etaText && etaText !== '-') {
+                const timeMatch = etaText.match(/(\d+)h (\d+)m/);
+                if (timeMatch) {
+                    const hours = parseInt(timeMatch[1]);
+                    const minutes = parseInt(timeMatch[2]);
+
+                    const eta = new Date(now.getTime() + (hours * 60 + minutes) * 60 * 1000);
+                    alert(`ETA Calculation:\n\nDeparture Time: ${now.toLocaleTimeString()}\nFlight Duration: ${etaText}\nEstimated Arrival: ${eta.toLocaleTimeString()}\n\nNote: Add taxi time and potential delays.`);
+                }
+            } else {
+                alert('Please generate a route map first to calculate ETA.');
+            }
+        }
+
+        function getAltitudeAdvice() {
+            alert('Altitude Planning Advice:\n\n• IFR Eastbound: Odd thousands (3000, 5000, 7000...)\n• IFR Westbound: Even thousands (4000, 6000, 8000...)\n• VFR Eastbound: Odd + 500 (3500, 5500, 7500...)\n• VFR Westbound: Even + 500 (4500, 6500, 8500...)\n\n• Consider winds aloft for optimal cruise altitude\n• Check MEA/MOCA for terrain clearance\n• Plan step climbs for long flights\n• Consider icing levels and turbulence reports');
+        }
+
+        function exportFlightPlan() {
+            const routeInput = document.getElementById('routeInput').value.trim();
+            if (!routeInput) {
+                alert('Please enter a route first!');
+                return;
+            }
+
+            const departure = document.getElementById('depAirport').textContent;
+            const arrival = document.getElementById('arrAirport').textContent;
+            const distance = document.getElementById('routeDistance').textContent;
+            const time = document.getElementById('routeTime').textContent;
+
+            const flightPlan = `FLIGHT PLAN\n\nRoute: ${routeInput}\nDeparture: ${departure}\nArrival: ${arrival}\nDistance: ${distance}\nEstimated Time: ${time}\n\nGenerated: ${new Date().toLocaleString()}\nSource: ATC Flight Plan Monitor`;
+
+            navigator.clipboard.writeText(flightPlan).then(() => {
+                alert('Flight plan exported to clipboard!');
+            }).catch(err => {
+                console.error('Failed to export flight plan:', err);
+            });
+        }
+
+        function copyCoordinates() {
+            const departure = document.getElementById('depAirport').textContent;
+            const arrival = document.getElementById('arrAirport').textContent;
+
+            if (departure === '-' || arrival === '-') {
+                alert('Please generate a route map first!');
+                return;
+            }
+
+            let coordText = `ROUTE COORDINATES\n\n`;
+
+            if (AIRPORT_COORDINATES[departure]) {
+                const depCoords = AIRPORT_COORDINATES[departure];
+                coordText += `${departure}: X=${depCoords.x}, Z=${depCoords.z}\n`;
+            }
+
+            if (AIRPORT_COORDINATES[arrival]) {
+                const arrCoords = AIRPORT_COORDINATES[arrival];
+                coordText += `${arrival}: X=${arrCoords.x}, Z=${arrCoords.z}\n`;
+            }
+
+            coordText += `\nGenerated: ${new Date().toLocaleString()}`;
+
+            navigator.clipboard.writeText(coordText).then(() => {
+                alert('Coordinates copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy coordinates:', err);
+            });
+        }
+
+        // Mock functions for pilot mode utilities
+        function getInstructions() {
+            alert("Pilot Mode Instructions:\n\n1. Enter your flight route (e.g., IGRV-IBAR) in the 'Route' field.\n2. Click 'Update Route' to see route details, distance, and estimated time.\n3. Use the buttons below the route to copy coordinates, calculate fuel, get weather info, estimate ETA, review altitude advice, and export your flight plan.\n4. The 'Active Clearances' section will show clearances for recent flights, which you can copy.\n5. Use the 'General Utilities' for additional pilot-specific information.");
+        }
+
+        function copyInstructions() {
+            const instructions = "Pilot Mode Instructions:\n\n1. Enter your flight route (e.g., IGRV-IBAR) in the 'Route' field.\n2. Click 'Update Route' to see route details, distance, and estimated time.\n3. Use the buttons below the route to copy coordinates, calculate fuel, get weather info, estimate ETA, review altitude advice, and export your flight plan.\n4. The 'Active Clearances' section will show clearances for recent flights, which you can copy.\n5. Use the 'General Utilities' for additional pilot-specific information.";
+            navigator.clipboard.writeText(instructions).then(() => {
+                alert('Instructions copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy instructions:', err);
+            });
+        }
+
+        // Update pilot mode when data refreshes
+        const originalUpdateData = updateData;
+        updateData = async function() {
+            await originalUpdateData();
+            if (isPilotModeOpen) {
+                updateActiveClearances();
+            }
         }
     </script>
 </body>
