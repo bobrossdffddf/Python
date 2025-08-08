@@ -207,6 +207,26 @@
 
     <script>
         let lastFlightCount = 0;
+        let lastProcessedFlightId = 0;
+        
+        // Create beep sound
+        function playBeep() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
         
         function showTab(tabName) {
             // Hide all tabs
@@ -274,6 +294,10 @@
                         
                         newFlights.forEach(flight => {
                             output.textContent += `[${flight.timestamp}] ${flight.clearance}\n`;
+                            // Play beep for new flights with alert flag
+                            if (flight.alert) {
+                                playBeep();
+                            }
                         });
                         output.scrollTop = output.scrollHeight;
                         lastFlightCount = flights.length;
@@ -359,6 +383,10 @@
                             
                             newFlights.forEach(flight => {
                                 output.textContent += `[${flight.timestamp}] ${flight.clearance}\n`;
+                                // Play beep for new flights with alert flag
+                                if (flight.alert) {
+                                    playBeep();
+                                }
                             });
                             output.scrollTop = output.scrollHeight;
                             lastFlightCount = flights.length;

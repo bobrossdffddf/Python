@@ -23,6 +23,7 @@ def make_clearance(flightplan):
 
     return (
         f"{callsign}, cleared IRF to {arriving} airport as filed.\n"
+        f"Clear for runway ___.\n"
         f"Climb and maintain {flightlevel * 100} feet.\n"
         f"After departure maintain {DEFAULT_HEADING} heading\n"
         f"Squawk {squawk}.\n"
@@ -40,45 +41,61 @@ MOCK_FLIGHTPLAN = {
     "flightlevel": "040"
 }
 
+# Airport codes to filter
+AIRPORT_CODES = ["IBAR", "IHEN", "ILAR", "IIAB", "IPAP", "IGRV", "IJAF", "IZOL", "ISCM", 
+                 "IDCS", "ITKO", "ILKL", "IPPH", "IGAR", "IBLT", "IRFD", "IMLR", "ITRC", 
+                 "IBTH", "IUFO", "ISAU", "ISKP"]
+
 app = Flask(__name__)
 flights_history = []
 status_log = []
 connection_status = "Disconnected"
+last_connection_status = None
 
 async def websocket_listener():
-    global connection_status
+    global connection_status, last_connection_status
     url = "wss://24data.ptfs.app/wss"
     while True:
         try:
             async with websockets.connect(url) as ws:
                 connection_status = "Connected"
-                status_log.append({
-                    "timestamp": datetime.now().strftime("%H:%M:%S"),
-                    "message": "Connected to ATC 24 feed."
-                })
+                if last_connection_status != "Connected":
+                    status_log.append({
+                        "timestamp": datetime.now().strftime("%H:%M:%S"),
+                        "message": "Connected to ATC 24 feed."
+                    })
+                    last_connection_status = "Connected"
+                
                 async for message in ws:
                     try:
                         packet = json.loads(message)
                         if packet.get("t") in ["FLIGHT_PLAN", "EVENT_FLIGHT_PLAN"]:
                             flightplan = packet["d"]
-                            clearance = make_clearance(flightplan)
-                            timestamp = datetime.now().strftime("%H:%M:%S")
                             
-                            # Add to history
-                            flight_info = {
-                                "timestamp": timestamp,
-                                "callsign": flightplan["callsign"],
-                                "aircraft": flightplan["aircraft"],
-                                "departing": flightplan["departing"],
-                                "arriving": flightplan["arriving"],
-                                "flightlevel": flightplan["flightlevel"],
-                                "clearance": clearance
-                            }
-                            flights_history.append(flight_info)
+                            # Check if flight involves our airports
+                            departing = flightplan.get("departing", "")
+                            arriving = flightplan.get("arriving", "")
                             
-                            # Keep only last 100 flights
-                            if len(flights_history) > 100:
-                                flights_history.pop(0)
+                            if departing in AIRPORT_CODES or arriving in AIRPORT_CODES:
+                                clearance = make_clearance(flightplan)
+                                timestamp = datetime.now().strftime("%H:%M:%S")
+                                
+                                # Add to history
+                                flight_info = {
+                                    "timestamp": timestamp,
+                                    "callsign": flightplan["callsign"],
+                                    "aircraft": flightplan["aircraft"],
+                                    "departing": flightplan["departing"],
+                                    "arriving": flightplan["arriving"],
+                                    "flightlevel": flightplan["flightlevel"],
+                                    "clearance": clearance,
+                                    "alert": True  # Flag for beep sound
+                                }
+                                flights_history.append(flight_info)
+                                
+                                # Keep only last 100 flights
+                                if len(flights_history) > 100:
+                                    flights_history.pop(0)
                                 
                     except Exception as e:
                         status_log.append({
@@ -87,10 +104,12 @@ async def websocket_listener():
                         })
         except Exception as e:
             connection_status = "Error"
-            status_log.append({
-                "timestamp": datetime.now().strftime("%H:%M:%S"),
-                "message": f"Connection error: {e}. Reconnecting in 5 seconds..."
-            })
+            if last_connection_status != "Error":
+                status_log.append({
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    "message": f"Connection error: {e}. Reconnecting in 5 seconds..."
+                })
+                last_connection_status = "Error"
             await asyncio.sleep(5)
 
 def start_ws_loop():
@@ -128,7 +147,8 @@ def generate_clearance():
             "departing": flightplan["departing"],
             "arriving": flightplan["arriving"],
             "flightlevel": flightplan["flightlevel"],
-            "clearance": clearance
+            "clearance": clearance,
+            "alert": False  # Manual entries don't trigger beeps
         }
         flights_history.append(flight_info)
         
