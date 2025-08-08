@@ -162,6 +162,26 @@ def generate_clearance():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
+@app.route('/api/update_runway', methods=['POST'])
+def update_runway():
+    """Update runway for existing flights"""
+    try:
+        data = request.json
+        runway = data.get('runway', '___')
+        
+        # Update all flights with new runway clearance
+        for flight in flights_history:
+            original_flightplan = {
+                'callsign': flight['callsign'],
+                'arriving': flight['arriving'],
+                'flightlevel': flight['flightlevel']
+            }
+            flight['clearance'] = make_clearance(original_flightplan, runway)
+            
+        return jsonify({"success": True, "message": f"Updated runway to {runway}"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
 @app.route('/api/clear_history', methods=['POST'])
 def clear_history():
     global flights_history

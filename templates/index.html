@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ATC Flight Plan Monitor</title>
-    
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
           crossorigin=""/>
-    
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
@@ -659,16 +659,16 @@
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-            
+
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
-            
+
             oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
             oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
-            
+
             gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
+
             oscillator.start(audioContext.currentTime);
             oscillator.stop(audioContext.currentTime + 0.5);
         }
@@ -677,11 +677,11 @@
             const mapContainer = document.getElementById('mapContainer');
             mapContainer.style.display = 'block';
             isMapOpen = true;
-            
+
             if (!map) {
                 initializeMap();
             }
-            
+
             // Refresh the map size and update aircraft
             setTimeout(() => {
                 if (map) {
@@ -767,10 +767,10 @@
             const centerLat = 25.7617;
             const centerLng = -80.1918;
             const scale = 0.001; // Adjust this scale factor as needed
-            
+
             const lat = centerLat + (ptfsY * scale);
             const lng = centerLng + (ptfsX * scale);
-            
+
             return [lat, lng];
         }
 
@@ -788,7 +788,7 @@
                 if (!aircraftData[callsign]) {
                     map.removeLayer(aircraftMarkers[callsign]);
                     delete aircraftMarkers[callsign];
-                    
+
                     if (aircraftTrails[callsign]) {
                         map.removeLayer(aircraftTrails[callsign]);
                         delete aircraftTrails[callsign];
@@ -801,7 +801,7 @@
                 if (!data.position) return;
 
                 const [lat, lng] = convertPTFSToLatLng(data.position.x, data.position.z || data.position.y);
-                
+
                 // Create or update marker
                 if (aircraftMarkers[callsign]) {
                     // Update existing marker position
@@ -810,7 +810,7 @@
                     // Create new marker
                     const isOnGround = data.isOnGround || (data.altitude && data.altitude < 100);
                     const markerColor = isOnGround ? '#ff9800' : '#2196F3';
-                    
+
                     const aircraftIcon = L.divIcon({
                         className: 'aircraft-marker',
                         html: `<div style="background: ${markerColor}; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; transform: rotate(${data.heading || 0}deg);"></div>`,
@@ -819,7 +819,7 @@
                     });
 
                     const marker = L.marker([lat, lng], {icon: aircraftIcon}).addTo(map);
-                    
+
                     // Create popup with aircraft info
                     const popupContent = `
                         <strong>${callsign}</strong><br>
@@ -831,7 +831,7 @@
                         <strong>Ground Speed:</strong> ${data.groundSpeed ? Math.round(data.groundSpeed) + ' kts' : 'Unknown'}<br>
                         <strong>On Ground:</strong> ${isOnGround ? 'Yes' : 'No'}
                     `;
-                    
+
                     marker.bindPopup(popupContent);
                     aircraftMarkers[callsign] = marker;
                 }
