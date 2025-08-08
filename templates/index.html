@@ -400,7 +400,6 @@
             </select>
         </div>
         <button onclick="clearHistory()">🗑️ Clear History</button>
-        <button onclick="exportHistory()">📋 Export History</button>
         <button class="map-button" onclick="openMap()">🗺️ Live Map</button>
     </div>
 
@@ -464,6 +463,12 @@
                 currentFilter = this.value;
                 setAirportFilter(currentFilter);
                 displayFlights();
+            });
+
+            // Handle runway input changes
+            const runwayInput = document.getElementById('runwayInput');
+            runwayInput.addEventListener('input', function() {
+                updateRunwayForAllFlights(this.value);
             });
 
             // Start polling for updates
@@ -638,6 +643,24 @@
             }
         }
 
+        async function updateRunwayForAllFlights(runway) {
+            if (!runway) runway = '___';
+            
+            try {
+                await fetch('/api/update_runway', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ runway: runway })
+                });
+                // Refresh the display
+                displayFlights();
+            } catch (error) {
+                console.error('Error updating runway:', error);
+            }
+        }
+
         async function clearHistory() {
             if (confirm('Are you sure you want to clear the flight history?')) {
                 try {
@@ -650,9 +673,7 @@
             }
         }
 
-        function exportHistory() {
-            window.open('/api/export_history', '_blank');
-        }
+        
 
         function playNotificationSound() {
             // Create a pleasant notification sound

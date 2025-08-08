@@ -68,7 +68,8 @@ async def websocket_listener():
                         # Handle flight plans
                         if packet.get("t") in ["FLIGHT_PLAN", "EVENT_FLIGHT_PLAN"]:
                             flightplan = packet["d"]
-                            clearance = make_clearance(flightplan, "___")  # Default runway placeholder
+                            # Use default runway placeholder for new flights - will be updated by frontend
+                            clearance = make_clearance(flightplan, "___")
                             timestamp = datetime.now().strftime("%H:%M:%S")
 
                             # Add to history
