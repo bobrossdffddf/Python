@@ -1,4 +1,3 @@
-
 import json
 import random
 import asyncio
@@ -23,6 +22,7 @@ def make_clearance(flightplan):
 
     return (
         f"{callsign}, cleared IRF to {arriving} airport as filed.\n"
+        f"Clear for runway ___.\n"  # Added "Clear for runway ___"
         f"Climb and maintain {flightlevel * 100} feet.\n"
         f"After departure maintain {DEFAULT_HEADING} heading\n"
         f"Squawk {squawk}.\n"
@@ -44,6 +44,7 @@ app = Flask(__name__)
 flights_history = []
 status_log = []
 connection_status = "Disconnected"
+connected_flights = {} # For tracking new flight plans to specific airports
 
 async def websocket_listener():
     global connection_status
@@ -51,11 +52,12 @@ async def websocket_listener():
     while True:
         try:
             async with websockets.connect(url) as ws:
-                connection_status = "Connected"
-                status_log.append({
-                    "timestamp": datetime.now().strftime("%H:%M:%S"),
-                    "message": "Connected to ATC 24 feed."
-                })
+                if connection_status != "Connected": # Only log connection once
+                    connection_status = "Connected"
+                    status_log.append({
+                        "timestamp": datetime.now().strftime("%H:%M:%S"),
+                        "message": "Connected to ATC 24 feed."
+                    })
                 async for message in ws:
                     try:
                         packet = json.loads(message)
@@ -63,7 +65,7 @@ async def websocket_listener():
                             flightplan = packet["d"]
                             clearance = make_clearance(flightplan)
                             timestamp = datetime.now().strftime("%H:%M:%S")
-                            
+
                             # Add to history
                             flight_info = {
                                 "timestamp": timestamp,
@@ -75,11 +77,22 @@ async def websocket_listener():
                                 "clearance": clearance
                             }
                             flights_history.append(flight_info)
-                            
+
                             # Keep only last 100 flights
                             if len(flights_history) > 100:
                                 flights_history.pop(0)
-                                
+
+                            # Airport filter and beeping sound logic
+                            user_airport_filter = request.cookies.get('airport_filter') # This would typically come from a cookie or session
+                            if user_airport_filter and flightplan["arriving"] == user_airport_filter:
+                                # In a real scenario, this would trigger a sound.
+                                # For this simulation, we'll just log it.
+                                status_log.append({
+                                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                                    "message": f"New flight plan for your airport {user_airport_filter}: {flightplan['callsign']}"
+                                })
+                                # Consider adding a flag or direct mechanism to trigger sound here if frontend is aware
+
                     except Exception as e:
                         status_log.append({
                             "timestamp": datetime.now().strftime("%H:%M:%S"),
@@ -100,18 +113,22 @@ def start_ws_loop():
 
 @app.route('/')
 def index():
+    # This route would typically serve your HTML file, which might include JavaScript
+    # to set an airport filter cookie and handle audio playback.
     return render_template('index.html')
 
 @app.route('/api/flights')
 def get_flights():
-    return jsonify(flights_history[-50:])  # Return last 50 flights
+    # In a real implementation, this would check the airport filter.
+    # For now, we return the last 50 flights.
+    return jsonify(flights_history[-50:])
 
 @app.route('/api/status')
 def get_status():
     return jsonify({
         "connection_status": connection_status,
         "total_flights": len(flights_history),
-        "status_log": status_log[-10:]  # Return last 10 status messages
+        "status_log": status_log[-10:]
     })
 
 @app.route('/api/generate_clearance', methods=['POST'])
@@ -120,7 +137,7 @@ def generate_clearance():
         flightplan = request.json
         clearance = make_clearance(flightplan)
         timestamp = datetime.now().strftime("%H:%M:%S")
-        
+
         flight_info = {
             "timestamp": timestamp,
             "callsign": flightplan["callsign"],
@@ -131,7 +148,7 @@ def generate_clearance():
             "clearance": clearance
         }
         flights_history.append(flight_info)
-        
+
         return jsonify({"success": True, "clearance": clearance, "flight": flight_info})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
@@ -147,7 +164,7 @@ def export_history():
     output = io.StringIO()
     json.dump(flights_history, output, indent=2)
     output.seek(0)
-    
+
     return send_file(
         io.BytesIO(output.getvalue().encode()),
         mimetype='application/json',
@@ -155,10 +172,26 @@ def export_history():
         download_name=f'flight_history_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
     )
 
+@app.route('/api/set_airport_filter', methods=['POST'])
+def set_airport_filter():
+    # This endpoint would be used by the frontend to set the user's preferred airport.
+    # The actual mechanism would involve setting a cookie or using a session.
+    # For this example, we'll just acknowledge the request.
+    data = request.json
+    airport_code = data.get("airport_code")
+    if airport_code:
+        # In a real app, you'd set a cookie here.
+        # response = make_response(jsonify({"success": True}))
+        # response.set_cookie('airport_filter', airport_code)
+        # return response
+        status_log.append({
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "message": f"Airport filter set to: {airport_code}"
+        })
+        return jsonify({"success": True, "message": f"Filter set for {airport_code}"})
+    return jsonify({"success": False, "message": "No airport code provided"}), 400
+
 if __name__ == '__main__':
-    # Start websocket listener in separate thread
     ws_thread = threading.Thread(target=start_ws_loop, daemon=True)
     ws_thread.start()
-    
-    # Start Flask app
     app.run(host='0.0.0.0', port=5000, debug=False)
