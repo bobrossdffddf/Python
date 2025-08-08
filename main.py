@@ -49,15 +49,17 @@ connected_flights = {} # For tracking new flight plans to specific airports
 async def websocket_listener():
     global connection_status
     url = "wss://24data.ptfs.app/wss"
+    connection_logged = False
     while True:
         try:
             async with websockets.connect(url) as ws:
-                if connection_status != "Connected": # Only log connection once
+                if not connection_logged:
                     connection_status = "Connected"
                     status_log.append({
                         "timestamp": datetime.now().strftime("%H:%M:%S"),
                         "message": "Connected to ATC 24 feed."
                     })
+                    connection_logged = True
                 async for message in ws:
                     try:
                         packet = json.loads(message)
@@ -82,16 +84,7 @@ async def websocket_listener():
                             if len(flights_history) > 100:
                                 flights_history.pop(0)
 
-                            # Airport filter and beeping sound logic
-                            user_airport_filter = request.cookies.get('airport_filter') # This would typically come from a cookie or session
-                            if user_airport_filter and flightplan["arriving"] == user_airport_filter:
-                                # In a real scenario, this would trigger a sound.
-                                # For this simulation, we'll just log it.
-                                status_log.append({
-                                    "timestamp": datetime.now().strftime("%H:%M:%S"),
-                                    "message": f"New flight plan for your airport {user_airport_filter}: {flightplan['callsign']}"
-                                })
-                                # Consider adding a flag or direct mechanism to trigger sound here if frontend is aware
+                            # Airport filtering and beep sound will be handled by frontend
 
                     except Exception as e:
                         status_log.append({
@@ -100,6 +93,7 @@ async def websocket_listener():
                         })
         except Exception as e:
             connection_status = "Error"
+            connection_logged = False
             status_log.append({
                 "timestamp": datetime.now().strftime("%H:%M:%S"),
                 "message": f"Connection error: {e}. Reconnecting in 5 seconds..."
