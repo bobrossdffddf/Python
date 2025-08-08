@@ -250,6 +250,95 @@
         ::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(45deg, #81C784, #A5D6A7);
         }
+        
+        /* Map Styles */
+        .map-container {
+            position: fixed;
+            top: 50px;
+            left: 50px;
+            right: 50px;
+            bottom: 50px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #4CAF50;
+            border-radius: 15px;
+            padding: 20px;
+            z-index: 2000;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        .close-map-btn {
+            background: #f44336;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .aircraft-map {
+            height: calc(100% - 80px);
+            overflow-y: auto;
+        }
+        
+        .map-info {
+            text-align: center;
+            color: #81C784;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 10px;
+        }
+        
+        .aircraft-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .aircraft-item {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .aircraft-callsign {
+            font-weight: bold;
+            color: #4CAF50;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .aircraft-details {
+            font-size: 12px;
+            color: #B0BEC5;
+        }
+        
+        .aircraft-details div {
+            margin: 3px 0;
+        }
+        
+        .online-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
     </style>
 </head>
 <body>
@@ -295,8 +384,20 @@
         </div>
         <button onclick="clearHistory()">🗑️ Clear History</button>
         <button onclick="exportHistory()">📋 Export History</button>
+        <div class="control-group">
+            <label>🔊 Beep Style:</label>
+            <select id="beepStyle">
+                <option value="1">Pleasant Chime</option>
+                <option value="2">Classic Beep</option>
+                <option value="3">Soft Ding</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>🔈 Volume:</label>
+            <input type="range" id="beepVolume" min="0" max="1" step="0.1" value="0.5">
+        </div>
         <button onclick="testBeep()">🔊 Test Beep</button>
-        <button class="map-button" onclick="openMap()" disabled>🗺️ Map (Coming Soon)</button>
+        <button class="map-button" onclick="openMap()">🗺️ Live Map</button>
     </div>
 
     <div class="status">
@@ -314,14 +415,38 @@
         </div>
     </div>
 
+    <!-- Map Container (initially hidden) -->
+    <div id="mapContainer" class="map-container" style="display: none;">
+        <div class="map-header">
+            <h3>🗺️ Live ATC Map</h3>
+            <button onclick="closeMap()" class="close-map-btn">✖️</button>
+        </div>
+        <div id="aircraftMap" class="aircraft-map">
+            <div class="map-info">
+                <p>📡 Live aircraft positions from ATC 24</p>
+                <p>🔄 Updates every 2 seconds</p>
+            </div>
+            <div id="aircraftList" class="aircraft-list">
+                <p>No aircraft data available...</p>
+            </div>
+        </div>
+    </div>
+
     <div class="flights-container">
         <div id="flightsList">
             <p style="text-align: center; color: #888;">No flight plans yet...</p>
         </div>
     </div>
 
-    <audio id="beepSound" preload="auto">
+    <!-- Multiple beep sound options -->
+    <audio id="beepSound1" preload="auto">
         <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIuGDSg2vLTeSIFJH3M8N2NSgcXbrDp56RXFgpJnN3uvmkuGDKdzPDUjEALDl+59+2PQQxOu+Xwtl8dBjGO1PLTEDKd0O/Pm0oUBFux7+mfRAwNZr3d5LJqGRJQj9jzvmEhGzaJ0/LNdSUGI3nK8d2OOwwVaLPp36hWGQdQo+L3wmIhBTOd0PLNeCUHInbF8N2RTwkRX7/u47hUGglQnOH1vWIfGzWayvPRjT4LEl6979mXQQkOYrjq8KhaGAlbpN/vpGItGTOYwvTpjEITEV+17+CJPRQNY7br8adTFQp7qN318pt0GwxblPf723JUGwdZofnC2WtEEQUXgtP6s3A5BjGM5P6xZCsNOIjd/bJgIgMWgN7/rHJYGghEltv2x28oNWe95/+qaS0MAYjd8e6zZS0GKnfH6vOmUSsFe7Tp/MV5JBgOvOLw0yU5MQAQ1+LhtmcSDzWe1uxlbiwBhvH6yKFdJggxjePsol8fCjWP4vC7aDcGJ2nD8OR4OQMqkOj4uV0aDjSe4/K3aywFL2XC8OR4OQUdl+b8umYvGSuN4fC8aDYNJVG77eWBRS4EGZna9LlnMRYjjeHyslwmCi2I4PK5ZysFGI3j9r5nKhgqjeL0umYtAhqM5fO7ZCkGJ4ji8rtoPgMhjeTwuWQrBiOH4vO7ZywOJ4vl9Lw=" type="audio/wav">
+    </audio>
+    <audio id="beepSound2" preload="auto">
+        <source src="data:audio/wav;base64,UklGRiQDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQADAACBZ4qFbF1HdJiEpHgAAAAAAIDn7+f4gOfl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fvh+fl5+fnh+fl5+fv8A" type="audio/wav">
+    </audio>
+    <audio id="beepSound3" preload="auto">
+        <source src="data:audio/wav;base64,UklGRhwEAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YfgDAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIuGDSg2vLTeSIFJH3M8N2NSgcXbrDp56RXFgpJnN3uvmkuGDKdzPDUjEALDl+59+2PQQxOu+Xwtl8dBjGO1PLT" type="audio/wav">
     </audio>
 
     <script>
@@ -331,6 +456,8 @@
         let approvedFlights = new Set();
         let userTimezone = '';
         let isApprovalBoxCollapsed = false;
+        let aircraftData = {};
+        let isMapOpen = false;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -392,8 +519,13 @@
                 const statusResponse = await fetch('/api/status');
                 const status = await statusResponse.json();
 
+                // Get aircraft data for map
+                const aircraftResponse = await fetch('/api/aircraft');
+                aircraftData = await aircraftResponse.json();
+
                 updateStatus(status);
                 displayFlights();
+                updateAircraftMap();
             } catch (error) {
                 console.error('Error updating data:', error);
             }
@@ -523,7 +655,11 @@
         }
 
         function playBeep() {
-            const audio = document.getElementById('beepSound');
+            const beepStyle = document.getElementById('beepStyle').value;
+            const volume = document.getElementById('beepVolume').value;
+            const audio = document.getElementById('beepSound' + beepStyle);
+            
+            audio.volume = volume;
             audio.currentTime = 0;
             audio.play().catch(e => console.log('Could not play beep:', e));
         }
@@ -533,8 +669,47 @@
         }
 
         function openMap() {
-            // Placeholder for future map functionality
-            alert('Map feature coming soon! 🗺️');
+            const mapContainer = document.getElementById('mapContainer');
+            mapContainer.style.display = 'block';
+            isMapOpen = true;
+            updateAircraftMap();
+        }
+        
+        function closeMap() {
+            const mapContainer = document.getElementById('mapContainer');
+            mapContainer.style.display = 'none';
+            isMapOpen = false;
+        }
+        
+        function updateAircraftMap() {
+            if (!isMapOpen) return;
+            
+            const aircraftList = document.getElementById('aircraftList');
+            const aircraftCount = Object.keys(aircraftData).length;
+            
+            if (aircraftCount === 0) {
+                aircraftList.innerHTML = '<p style="text-align: center; color: #888;">No aircraft data available...</p>';
+                return;
+            }
+            
+            aircraftList.innerHTML = Object.entries(aircraftData).map(([callsign, data]) => `
+                <div class="aircraft-item">
+                    <div class="aircraft-callsign">
+                        <span class="online-status"></span>${callsign}
+                    </div>
+                    <div class="aircraft-details">
+                        <div><strong>Pilot:</strong> ${data.playerName || 'Unknown'}</div>
+                        <div><strong>Aircraft:</strong> ${data.aircraftType || 'Unknown'}</div>
+                        <div><strong>Altitude:</strong> ${data.altitude ? Math.round(data.altitude) + ' ft' : 'Unknown'}</div>
+                        <div><strong>Heading:</strong> ${data.heading || 'Unknown'}°</div>
+                        <div><strong>Speed:</strong> ${data.speed ? Math.round(data.speed) + ' kts' : 'Unknown'}</div>
+                        <div><strong>Ground Speed:</strong> ${data.groundSpeed ? Math.round(data.groundSpeed) + ' kts' : 'Unknown'}</div>
+                        <div><strong>Position:</strong> ${data.position ? `${data.position.x}, ${data.position.y}` : 'Unknown'}</div>
+                        <div><strong>Wind:</strong> ${data.wind || 'Unknown'}</div>
+                        <div><strong>On Ground:</strong> ${data.isOnGround ? 'Yes' : 'No'}</div>
+                    </div>
+                </div>
+            `).join('');
         }
     </script>
 </body>

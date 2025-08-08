@@ -45,6 +45,7 @@ flights_history = []
 status_log = []
 connection_status = "Disconnected"
 connected_flights = {} # For tracking new flight plans to specific airports
+aircraft_data = {} # For storing live aircraft data
 
 async def websocket_listener():
     global connection_status
@@ -63,6 +64,8 @@ async def websocket_listener():
                 async for message in ws:
                     try:
                         packet = json.loads(message)
+                        
+                        # Handle flight plans
                         if packet.get("t") in ["FLIGHT_PLAN", "EVENT_FLIGHT_PLAN"]:
                             flightplan = packet["d"]
                             clearance = make_clearance(flightplan)
@@ -84,7 +87,10 @@ async def websocket_listener():
                             if len(flights_history) > 100:
                                 flights_history.pop(0)
 
-                            # Airport filtering and beep sound will be handled by frontend
+                        # Handle aircraft data for live map
+                        elif packet.get("t") in ["ACFT_DATA", "EVENT_ACFT_DATA"]:
+                            global aircraft_data
+                            aircraft_data = packet["d"]  # This is the aircraft data object
 
                     except Exception as e:
                         status_log.append({
@@ -184,6 +190,11 @@ def set_airport_filter():
         })
         return jsonify({"success": True, "message": f"Filter set for {airport_code}"})
     return jsonify({"success": False, "message": "No airport code provided"}), 400
+
+@app.route('/api/aircraft')
+def get_aircraft():
+    """Get live aircraft data for the map"""
+    return jsonify(aircraft_data)
 
 if __name__ == '__main__':
     ws_thread = threading.Thread(target=start_ws_loop, daemon=True)
