@@ -1861,8 +1861,8 @@
             loadGameMapBackground();
             updateLiveMapFlights();
             
-            // Start live updates
-            liveMapUpdateInterval = setInterval(updateLiveMapFlights, 2000);
+            // Start live updates (reduced frequency to prevent crashes)
+            liveMapUpdateInterval = setInterval(updateLiveMapFlights, 5000);
         }
 
         function closeLiveMap() {
@@ -1881,68 +1881,64 @@
 
         function loadGameMapBackground() {
             const liveMapSVG = document.getElementById('liveMapSVG');
-            const gameMapPath = window.MAP_CONFIG ? window.MAP_CONFIG.gameMapPath : '/static/maps/game_map.svg';
             
-            fetch(gameMapPath)
-                .then(response => response.text())
-                .then(svgContent => {
-                    // Extract the content inside the SVG tags
-                    const parser = new DOMParser();
-                    const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
-                    const svgElement = svgDoc.querySelector('svg');
-                    
-                    if (svgElement) {
-                        // Create background group and add all SVG content to it
-                        let bgGroup = liveMapSVG.querySelector('#gameMapBackground');
-                        if (!bgGroup) {
-                            bgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                            bgGroup.id = 'gameMapBackground';
-                            liveMapSVG.insertBefore(bgGroup, liveMapSVG.firstChild);
-                        }
-                        
-                        // Copy all children from the loaded SVG
-                        while (svgElement.firstChild) {
-                            bgGroup.appendChild(document.importNode(svgElement.firstChild, true));
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.log('Game map not found, using colored background');
-                    // Add colored background rectangle
-                    let bgGroup = liveMapSVG.querySelector('#gameMapBackground');
-                    if (!bgGroup) {
-                        bgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                        bgGroup.id = 'gameMapBackground';
-                        liveMapSVG.insertBefore(bgGroup, liveMapSVG.firstChild);
-                    }
-                    
-                    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    bgRect.setAttribute('x', '0');
-                    bgRect.setAttribute('y', '0');
-                    bgRect.setAttribute('width', '964');
-                    bgRect.setAttribute('height', '921');
-                    bgRect.setAttribute('fill', 'url(#mapBg)');
-                    bgGroup.appendChild(bgRect);
-                    
-                    // Add gradient definition
-                    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-                    const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-                    gradient.setAttribute('id', 'mapBg');
-                    gradient.setAttribute('gradientTransform', 'rotate(135)');
-                    
-                    const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-                    stop1.setAttribute('offset', '0%');
-                    stop1.setAttribute('stop-color', '#0f0f23');
-                    
-                    const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-                    stop2.setAttribute('offset', '100%');
-                    stop2.setAttribute('stop-color', '#1a1a3e');
-                    
-                    gradient.appendChild(stop1);
-                    gradient.appendChild(stop2);
-                    defs.appendChild(gradient);
-                    liveMapSVG.insertBefore(defs, liveMapSVG.firstChild);
-                });
+            // Use a simple colored background to prevent crashes
+            let bgGroup = liveMapSVG.querySelector('#gameMapBackground');
+            if (!bgGroup) {
+                bgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                bgGroup.id = 'gameMapBackground';
+                liveMapSVG.insertBefore(bgGroup, liveMapSVG.firstChild);
+            }
+            
+            // Add simple background
+            const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bgRect.setAttribute('x', '0');
+            bgRect.setAttribute('y', '0');
+            bgRect.setAttribute('width', '964');
+            bgRect.setAttribute('height', '921');
+            bgRect.setAttribute('fill', '#2a2a4a');
+            bgRect.setAttribute('stroke', '#444');
+            bgRect.setAttribute('stroke-width', '2');
+            bgGroup.appendChild(bgRect);
+            
+            // Add grid lines for reference
+            for (let i = 0; i <= 10; i++) {
+                const x = (i * 96.4);
+                const y = (i * 92.1);
+                
+                // Vertical lines
+                const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                vLine.setAttribute('x1', x);
+                vLine.setAttribute('y1', '0');
+                vLine.setAttribute('x2', x);
+                vLine.setAttribute('y2', '921');
+                vLine.setAttribute('stroke', '#444');
+                vLine.setAttribute('stroke-width', '1');
+                vLine.setAttribute('opacity', '0.3');
+                bgGroup.appendChild(vLine);
+                
+                // Horizontal lines
+                const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                hLine.setAttribute('x1', '0');
+                hLine.setAttribute('y1', y);
+                hLine.setAttribute('x2', '964');
+                hLine.setAttribute('y2', y);
+                hLine.setAttribute('stroke', '#444');
+                hLine.setAttribute('stroke-width', '1');
+                hLine.setAttribute('opacity', '0.3');
+                bgGroup.appendChild(hLine);
+            }
+            
+            // Add title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', '482');
+            title.setAttribute('y', '50');
+            title.setAttribute('text-anchor', 'middle');
+            title.setAttribute('fill', '#50c878');
+            title.setAttribute('font-size', '24');
+            title.setAttribute('font-weight', 'bold');
+            title.textContent = 'PTFS Live Flight Map';
+            bgGroup.appendChild(title);
         }
 
         function setupLiveMapControls() {
@@ -2017,7 +2013,9 @@
         }
 
         function updateLiveMapFlights() {
-            if (!liveAircraftData) return;
+            if (!liveAircraftData || Object.keys(liveAircraftData).length === 0) {
+                return;
+            }
             
             const liveFlightPaths = document.getElementById('liveFlightPaths');
             const liveAircraftMarkers = document.getElementById('liveAircraftMarkers');
@@ -2028,91 +2026,56 @@
             liveFlightPaths.innerHTML = '';
             liveAircraftMarkers.innerHTML = '';
             
-            // Add all active aircraft
-            Object.keys(liveAircraftData).forEach(callsign => {
+            // Limit to first 20 aircraft to prevent performance issues
+            const aircraftList = Object.keys(liveAircraftData).slice(0, 20);
+            let validAircraftCount = 0;
+            
+            aircraftList.forEach(callsign => {
                 const aircraftData = liveAircraftData[callsign];
                 if (!aircraftData || !aircraftData.position) return;
                 
-                // Convert PTFS coordinates to map coordinates (rough conversion)
-                const mapX = Math.max(0, Math.min(964, (aircraftData.position.x + 3500) * (964 / 7000)));
-                const mapY = Math.max(0, Math.min(921, (4500 - aircraftData.position.y) * (921 / 4500)));
+                validAircraftCount++;
                 
-                // Find matching flight plan for route line
-                const flightPlan = flights.find(f => f.callsign === callsign);
+                // Simplified coordinate conversion (will need calibration with real map)
+                const mapX = Math.max(50, Math.min(914, 482 + (aircraftData.position.x / 10)));
+                const mapY = Math.max(50, Math.min(871, 460 - (aircraftData.position.y / 10)));
                 
-                if (flightPlan) {
-                    const depCoords = GAME_MAP_COORDINATES[flightPlan.departing];
-                    const arrCoords = GAME_MAP_COORDINATES[flightPlan.arriving];
-                    
-                    if (depCoords && arrCoords) {
-                        // Add route line
-                        const routeLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        routeLine.setAttribute('x1', depCoords.x);
-                        routeLine.setAttribute('y1', depCoords.y);
-                        routeLine.setAttribute('x2', arrCoords.x);
-                        routeLine.setAttribute('y2', arrCoords.y);
-                        routeLine.setAttribute('stroke', '#4a90e2');
-                        routeLine.setAttribute('stroke-width', '2');
-                        routeLine.setAttribute('stroke-dasharray', '5,5');
-                        routeLine.setAttribute('opacity', '0.6');
-                        liveFlightPaths.appendChild(routeLine);
-                        
-                        // Add departure airport marker
-                        const depMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                        depMarker.setAttribute('cx', depCoords.x);
-                        depMarker.setAttribute('cy', depCoords.y);
-                        depMarker.setAttribute('r', '6');
-                        depMarker.setAttribute('fill', '#50c878');
-                        depMarker.setAttribute('stroke', 'white');
-                        depMarker.setAttribute('stroke-width', '1');
-                        liveAircraftMarkers.appendChild(depMarker);
-                        
-                        // Add arrival airport marker
-                        const arrMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                        arrMarker.setAttribute('cx', arrCoords.x);
-                        arrMarker.setAttribute('cy', arrCoords.y);
-                        arrMarker.setAttribute('r', '6');
-                        arrMarker.setAttribute('fill', '#f44336');
-                        arrMarker.setAttribute('stroke', 'white');
-                        arrMarker.setAttribute('stroke-width', '1');
-                        liveAircraftMarkers.appendChild(arrMarker);
-                    }
-                }
-                
-                // Add aircraft marker
+                // Add aircraft marker only
                 const aircraftMarker = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 circle.setAttribute('cx', mapX);
                 circle.setAttribute('cy', mapY);
-                circle.setAttribute('r', '8');
+                circle.setAttribute('r', '6');
                 circle.setAttribute('fill', '#ffff00');
                 circle.setAttribute('stroke', 'white');
                 circle.setAttribute('stroke-width', '2');
                 
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 text.setAttribute('x', mapX);
-                text.setAttribute('y', mapY - 15);
+                text.setAttribute('y', mapY - 12);
                 text.setAttribute('text-anchor', 'middle');
                 text.setAttribute('fill', '#ffff00');
-                text.setAttribute('font-size', '10');
+                text.setAttribute('font-size', '9');
                 text.setAttribute('font-weight', 'bold');
                 text.textContent = callsign;
                 
-                const infoText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                infoText.setAttribute('x', mapX);
-                infoText.setAttribute('y', mapY + 25);
-                infoText.setAttribute('text-anchor', 'middle');
-                infoText.setAttribute('fill', '#ffffff');
-                infoText.setAttribute('font-size', '8');
-                infoText.textContent = `${aircraftData.altitude}ft ${Math.round(aircraftData.groundSpeed)}kts`;
-                
                 aircraftMarker.appendChild(circle);
                 aircraftMarker.appendChild(text);
-                aircraftMarker.appendChild(infoText);
-                
                 liveAircraftMarkers.appendChild(aircraftMarker);
             });
+            
+            // Add a simple status indicator
+            if (validAircraftCount > 0) {
+                const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                statusText.setAttribute('x', '20');
+                statusText.setAttribute('y', '30');
+                statusText.setAttribute('fill', '#50c878');
+                statusText.setAttribute('font-size', '14');
+                statusText.setAttribute('font-weight', 'bold');
+                statusText.textContent = `${validAircraftCount} Active Aircraft`;
+                liveAircraftMarkers.appendChild(statusText);
+            }
             
             updateLiveMapTransform();
         }
