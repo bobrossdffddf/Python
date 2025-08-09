@@ -991,7 +991,7 @@
                 <span class="close" onclick="closeLiveMap()">&times;</span>
             </div>
             <div class="live-map-container" id="liveMapContainer">
-                <svg id="liveMapSVG" class="live-map-svg" viewBox="0 0 964 921">
+                <svg id="liveMapSVG" class="live-map-svg" viewBox="0 0 1200 1200">
                     <!-- Background will be inserted here -->
                     <g id="liveFlightPaths"></g>
                     <g id="liveAircraftMarkers"></g>
@@ -1913,14 +1913,14 @@
                 })
                 .catch(error => {
                     console.log('⚠️ Could not load game map SVG, using fallback');
-                    // Fallback to simple background
+                    // Fallback to simple background matching your game map
                     const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     bgRect.setAttribute('x', '0');
                     bgRect.setAttribute('y', '0');
-                    bgRect.setAttribute('width', '964');
-                    bgRect.setAttribute('height', '921');
-                    bgRect.setAttribute('fill', '#1a1a3e');
-                    bgRect.setAttribute('stroke', '#444');
+                    bgRect.setAttribute('width', '1200');
+                    bgRect.setAttribute('height', '1200');
+                    bgRect.setAttribute('fill', '#4a7c59');  // Green color to match typical game map
+                    bgRect.setAttribute('stroke', '#2d4a35');
                     bgRect.setAttribute('stroke-width', '2');
                     bgGroup.appendChild(bgRect);
 
@@ -2023,8 +2023,8 @@
             // Update viewBox for proper scaling
             const viewBoxX = -liveMapPanX / liveMapZoom;
             const viewBoxY = -liveMapPanY / liveMapZoom;
-            const viewBoxWidth = 964 / liveMapZoom;
-            const viewBoxHeight = 921 / liveMapZoom;
+            const viewBoxWidth = 1200 / liveMapZoom;
+            const viewBoxHeight = 1200 / liveMapZoom;
 
             liveMapSVG.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`);
         }
@@ -2057,34 +2057,21 @@
 
                 validAircraftCount++;
 
-                // FIXED coordinate conversion for PTFS to SVG
-                // PTFS coordinate system: -y is North (so positive Y values are South)
-                // Your map SVG: 0,0 is top-left, Y increases downward
-                // Based on the game world, we need to properly scale and orient
+                // COMPLETELY DIFFERENT APPROACH - Use 1:100 scale conversion
+                // According to your original instruction: 1px in SVG = 100 studs in game
+                const ptfsX = aircraftData.position.x; // PTFS X position
+                const ptfsY = aircraftData.position.y; // PTFS Y position
 
-                const ptfsX = aircraftData.position.x; // PTFS X position (-x is West)
-                const ptfsY = aircraftData.position.y; // PTFS Y position (-y is North)
+                // Simple 1:100 conversion - YOUR ORIGINAL INSTRUCTION
+                // Map center adjustment - assuming map center is at game coordinate 0,0
+                const mapCenterX = 600; // Half of 1200
+                const mapCenterY = 600; // Half of 1200
+                
+                // Convert PTFS coordinates directly using 1px = 100 studs
+                let mapX = mapCenterX + (ptfsX / 100);  // Direct conversion
+                let mapY = mapCenterY - (ptfsY / 100);  // Flip Y (PTFS +Y is North, SVG +Y is down)
 
-                // Reverse the coordinate conversion - if Nitro 6691 should be at x272 y648 but appears "on top"
-                // We need to flip the Y calculation and adjust the scaling
-
-                // PTFS world bounds (approximate based on typical values)
-                const ptfsBounds = {
-                    minX: -4000,   // Western edge
-                    maxX: 1000,    // Eastern edge  
-                    minY: -2000,   // Southern edge (remember -y is North, so this is actually North)
-                    maxY: 25000    // Northern edge (this is actually South)
-                };
-
-                // Normalize PTFS coordinates to 0-1 range
-                const normalizedX = (ptfsX - ptfsBounds.minX) / (ptfsBounds.maxX - ptfsBounds.minX);
-                const normalizedY = (ptfsY - ptfsBounds.minY) / (ptfsBounds.maxY - ptfsBounds.minY);
-
-                // Convert to SVG coordinates (flip Y since PTFS -y is North, SVG +y is down)
-                let mapX = normalizedX * 1200;          // Scale to map width (1200x1200)
-                let mapY = (1 - normalizedY) * 1200;    // Scale to map height (1200x1200) and flip Y axis
-
-                // Clamp to map bounds with padding
+                // Clamp to map bounds
                 mapX = Math.max(30, Math.min(1170, mapX));
                 mapY = Math.max(30, Math.min(1170, mapY));
 
@@ -2092,7 +2079,7 @@
                 debugInfo.push({
                     callsign,
                     ptfs: { x: ptfsX, y: ptfsY },
-                    normalized: { x: normalizedX.toFixed(3), y: normalizedY.toFixed(3) },
+                    direct_conversion: { x: ptfsX / 100, y: ptfsY / 100 },
                     svg: { x: Math.round(mapX), y: Math.round(mapY) }
                 });
 
@@ -2171,7 +2158,7 @@
                 debugText.setAttribute('font-size', '12');
                 debugText.setAttribute('stroke', '#000');
                 debugText.setAttribute('stroke-width', '0.5');
-                debugText.textContent = 'PTFS Bounds: X(-4000,1000) Y(-2000,25000) | Y-axis flipped for North-up';
+                debugText.textContent = 'Direct 1:100 Scale Conversion | 1px = 100 studs | Center at 600,600';
                 liveAircraftMarkers.appendChild(debugText);
 
                 // Additional debug info
@@ -2182,7 +2169,7 @@
                 debugText2.setAttribute('font-size', '10');
                 debugText2.setAttribute('stroke', '#000');
                 debugText2.setAttribute('stroke-width', '0.5');
-                debugText2.textContent = 'Map: 964x921 | Coordinate system corrected for PTFS world';
+                debugText2.textContent = 'Map: 1200x1200 | Y-axis flipped (PTFS +Y=North, SVG +Y=down)';
                 liveAircraftMarkers.appendChild(debugText2);
 
                 // Log first aircraft coordinates for debugging
