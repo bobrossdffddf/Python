@@ -2064,17 +2064,20 @@
 
                 // Simple 1:100 conversion - YOUR ORIGINAL INSTRUCTION
                 // Map center adjustment - assuming map center is at game coordinate 0,0
-                const mapCenterX = 600; // Half of 1200
-                const mapCenterY = 600; // Half of 1200
+                // Fixed coordinate conversion based on your calibration data
+                // Target: PTFS (-46630, 27566) should map to SVG (290, 623)
                 
-                // Adjusted coordinate conversion based on calibration
-                // Original: PTFS (-46630, 27566) → SVG (134, 876)
-                // Target: PTFS (-46630, 27566) → SVG (290, 623)
+                // Calculate the proper offset and scale
+                // Using your reference point: PTFS (-46630, 27566) → SVG (290, 623)
+                const referenceX = -46630;
+                const referenceY = 27566;
+                const targetSvgX = 290;
+                const targetSvgY = 623;
                 
-                // Calculate offset and scale adjustments
-                let mapX = mapCenterX + (ptfsX / 100) + 156;  // Added offset to shift right
-                let mapY = mapCenterY - (ptfsY / 100) - 253;  // Flipped Y and added offset
-
+                // Direct mapping with calibrated offsets
+                let mapX = targetSvgX + ((ptfsX - referenceX) / 100);
+                let mapY = targetSvgY + ((referenceY - ptfsY) / 100);  // Y flipped relative to reference
+                
                 // Clamp to map bounds
                 mapX = Math.max(30, Math.min(1170, mapX));
                 mapY = Math.max(30, Math.min(1170, mapY));
