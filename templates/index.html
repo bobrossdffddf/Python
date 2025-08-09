@@ -2094,6 +2094,10 @@
                 }
             });
 
+            // Calculate dynamic ranges from actual aircraft positions
+            const ptfsXRange = Math.max(maxX - minX, 1000); // Minimum range to avoid division by zero
+            const ptfsYRange = Math.max(maxY - minY, 1000);
+
             aircraftList.forEach(callsign => {
                 const aircraftData = liveAircraftData[callsign];
                 if (!aircraftData || !aircraftData.position) return;
@@ -2108,21 +2112,17 @@
                 const mapHeight = 1200;
                 const padding = 100; // Leave some padding around edges
                 
-                // Calculate dynamic ranges from actual aircraft positions
-                const ptfsXRange = Math.max(maxX - minX, 1000); // Minimum range to avoid division by zero
-                const ptfsYRange = Math.max(maxY - minY, 1000);
-                
                 // Normalize coordinates based on actual aircraft ranges
                 const normalizedX = ptfsXRange > 1000 ? (ptfsX - minX) / ptfsXRange : 0.5;
                 const normalizedY = ptfsYRange > 1000 ? (ptfsY - minY) / ptfsYRange : 0.5;
                 
-                // Convert to map coordinates with padding
+                // Convert to map coordinates with padding and slight upward adjustment
                 let mapX = padding + (normalizedX * (mapWidth - 2 * padding));
-                let mapY = padding + (normalizedY * (mapHeight - 2 * padding));
+                let mapY = padding + (normalizedY * (mapHeight - 2 * padding)) - 30; // Move aircraft up by 30 pixels
                 
                 // Ensure aircraft stay within map bounds
                 mapX = Math.max(50, Math.min(1150, mapX));
-                mapY = Math.max(50, Math.min(1150, mapY));
+                mapY = Math.max(30, Math.min(1150, mapY)); // Adjusted to account for upward shift
 
                 // Store debug info
                 debugInfo.push({
@@ -2223,7 +2223,7 @@
 
                 // Log first aircraft coordinates for debugging
                 if (debugInfo.length > 0) {
-                    console.log('🛩️ Dynamic coordinate conversion:', debugInfo[0]);
+                    console.log('🛩️ Fixed coordinate conversion:', debugInfo[0]);
                     console.log(`📊 PTFS Ranges: X(${minX} to ${maxX}), Y(${minY} to ${maxY})`);
                     console.log('📍 All aircraft positions:', debugInfo.slice(0, 3)); // Show first 3 for debugging
                 }
