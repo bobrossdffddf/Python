@@ -2071,9 +2071,9 @@
                 let mapX = -ptfsX / 100;  // -x is West, so negate for SVG coordinates
                 let mapY = -ptfsY / 100;  // -y is North, so negate for SVG coordinates
                 
-                // Clamp to map bounds (1200x1200 as per your map)
-                mapX = Math.max(0, Math.min(1200, mapX));
-                mapY = Math.max(0, Math.min(1200, mapY));
+                // No clamping needed - let aircraft appear wherever they are
+                // The map will show aircraft even if they're outside visible bounds
+                // mapX and mapY can be any value - SVG will handle it
 
                 // Store debug info
                 debugInfo.push({
