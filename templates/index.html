@@ -1934,7 +1934,7 @@
         let liveMapUpdateInterval = null;
         let zoomTransitionTimeout = null;
 
-        function openLiveMap() {
+        async function openLiveMap() {
             const liveMapOverlay = document.getElementById('liveMapOverlay');
             const mouseCoordinates = document.getElementById('mouseCoordinates');
 
@@ -1942,8 +1942,12 @@
             mouseCoordinates.style.display = 'block';
             document.body.style.overflow = 'hidden';
 
+            // Load airport positions first
+            await loadAirportPositions();
+
             setupLiveMapControls();
             loadGameMapBackground();
+            addAirportMarkersToLiveMap();
             updateLiveMapFlights();
 
             // Start live updates (reduced frequency to prevent crashes)
@@ -2090,7 +2094,32 @@
             });
 
             document.addEventListener('mousemove', function(e) {
-                if (liveMapDragging) {
+                if (isDraggingAirport && draggedAirport) {
+                    // Handle airport dragging
+                    const rect = liveMapSVG.getBoundingClientRect();
+                    const svgX = ((e.clientX - rect.left) / rect.width) * 1200;
+                    const svgY = ((e.clientY - rect.top) / rect.height) * 1200;
+                    
+                    // Update airport position
+                    const airportMarker = liveMapSVG.querySelector(`[data-airport="${draggedAirport}"]`);
+                    if (airportMarker) {
+                        const circle = airportMarker.querySelector('circle');
+                        const text = airportMarker.querySelector('text');
+                        const coordText = airportMarker.querySelectorAll('text')[1];
+                        
+                        circle.setAttribute('cx', svgX);
+                        circle.setAttribute('cy', svgY);
+                        text.setAttribute('x', svgX);
+                        text.setAttribute('y', svgY - 15);
+                        coordText.setAttribute('x', svgX);
+                        coordText.setAttribute('y', svgY + 25);
+                        coordText.textContent = `(${Math.round(svgX)}, ${Math.round(svgY)})`;
+                        
+                        // Update stored position
+                        airportPositions[draggedAirport] = {x: Math.round(svgX), y: Math.round(svgY)};
+                    }
+                } else if (liveMapDragging) {
+                    // Handle map panning
                     const deltaX = (e.clientX - liveMapLastX) / liveMapZoom;
                     const deltaY = (e.clientY - liveMapLastY) / liveMapZoom;
 
@@ -2105,6 +2134,20 @@
             });
 
             document.addEventListener('mouseup', function() {
+                if (isDraggingAirport && draggedAirport) {
+                    // Save airport position to file
+                    const position = airportPositions[draggedAirport];
+                    saveAirportPosition(draggedAirport, position.x, position.y);
+                    
+                    const airportMarker = liveMapSVG.querySelector(`[data-airport="${draggedAirport}"]`);
+                    if (airportMarker) {
+                        airportMarker.style.cursor = 'grab';
+                    }
+                    
+                    isDraggingAirport = false;
+                    draggedAirport = null;
+                }
+                
                 liveMapDragging = false;
                 liveMapSVG.classList.remove('dragging');
             });
@@ -2149,6 +2192,11 @@
             updateLiveMapTransform();
         }
 
+        // Store airport positions globally
+        let airportPositions = {};
+        let isDraggingAirport = false;
+        let draggedAirport = null;
+
         function updateLiveMapFlights() {
             if (!liveAircraftData || Object.keys(liveAircraftData).length === 0) {
                 return;
@@ -2159,27 +2207,13 @@
 
             if (!liveFlightPaths || !liveAircraftMarkers) return;
 
-            // Clear existing elements
-            liveFlightPaths.innerHTML = '';
-            liveAircraftMarkers.innerHTML = '';
+            // Clear existing aircraft (but keep airport markers)
+            const existingAircraft = liveAircraftMarkers.querySelectorAll('.aircraft-marker');
+            existingAircraft.forEach(marker => marker.remove());
 
-            // Add airport markers first
-            addAirportMarkersToLiveMap();
-
-            // Get all aircraft
+            // Get all aircraft and use SIMPLE coordinate conversion
             const aircraftList = Object.keys(liveAircraftData);
             let validAircraftCount = 0;
-            const usedPositions = new Set();
-
-            // Use fixed coordinate bounds that match the game world better
-            const FIXED_BOUNDS = {
-                minX: -70000, maxX: 70000,  // Expanded range
-                minY: -40000, maxY: 70000   // Expanded range
-            };
-
-            const mapWidth = 1200;
-            const mapHeight = 1200;
-            const mapPadding = 50; // Reduced padding for better use of space
 
             aircraftList.forEach(callsign => {
                 const aircraftData = liveAircraftData[callsign];
@@ -2190,38 +2224,23 @@
                 const ptfsX = aircraftData.position.x;
                 const ptfsY = aircraftData.position.y;
 
-                // Convert PTFS coordinates to map coordinates using fixed bounds
-                const normalizedX = (ptfsX - FIXED_BOUNDS.minX) / (FIXED_BOUNDS.maxX - FIXED_BOUNDS.minX);
-                const normalizedY = (ptfsY - FIXED_BOUNDS.minY) / (FIXED_BOUNDS.maxY - FIXED_BOUNDS.minY);
+                // SIMPLE conversion: divide by 100 and center on map
+                let mapX = 600 + (ptfsX / 100);
+                let mapY = 600 + (ptfsY / 100);
                 
-                // Map to map area with padding
-                let mapX = mapPadding + (normalizedX * (mapWidth - 2 * mapPadding));
-                let mapY = mapPadding + (normalizedY * (mapHeight - 2 * mapPadding));
-                
-                // Ensure aircraft stay within bounds
-                mapX = Math.max(mapPadding, Math.min(mapWidth - mapPadding, mapX));
-                mapY = Math.max(mapPadding, Math.min(mapHeight - mapPadding, mapY));
+                // Keep aircraft within map bounds
+                mapX = Math.max(50, Math.min(1150, mapX));
+                mapY = Math.max(50, Math.min(1150, mapY));
 
-                // Handle position conflicts with smaller grid
-                const posKey = `${Math.round(mapX/20)}_${Math.round(mapY/20)}`;
-                let offset = 0;
-                while (usedPositions.has(`${posKey}_${offset}`)) {
-                    offset += 10;
-                    if (offset > 30) break;
-                }
-                usedPositions.add(`${posKey}_${offset}`);
-
-                const finalX = mapX + (offset % 20) - 10;
-                const finalY = mapY + Math.floor(offset / 20) * 10;
-
-                // Create aircraft marker with pulsing animation
+                // Create aircraft marker
                 const aircraftMarker = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                aircraftMarker.setAttribute('class', 'aircraft-marker');
                 aircraftMarker.setAttribute('id', `aircraft_${callsign}`);
 
                 // Aircraft circle with pulsing animation
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circle.setAttribute('cx', finalX);
-                circle.setAttribute('cy', finalY);
+                circle.setAttribute('cx', mapX);
+                circle.setAttribute('cy', mapY);
                 circle.setAttribute('r', '6');
                 circle.setAttribute('fill', '#00ff00');
                 circle.setAttribute('stroke', '#fff');
@@ -2235,10 +2254,10 @@
                 animate.setAttribute('repeatCount', 'indefinite');
                 circle.appendChild(animate);
 
-                // Callsign text with better contrast
+                // Callsign text
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                text.setAttribute('x', finalX);
-                text.setAttribute('y', finalY - 15);
+                text.setAttribute('x', mapX);
+                text.setAttribute('y', mapY - 15);
                 text.setAttribute('text-anchor', 'middle');
                 text.setAttribute('fill', '#00ff00');
                 text.setAttribute('font-size', '11');
@@ -2249,8 +2268,8 @@
 
                 // Aircraft data tooltip
                 const infoText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                infoText.setAttribute('x', finalX);
-                infoText.setAttribute('y', finalY + 20);
+                infoText.setAttribute('x', mapX);
+                infoText.setAttribute('y', mapY + 20);
                 infoText.setAttribute('text-anchor', 'middle');
                 infoText.setAttribute('fill', '#ccc');
                 infoText.setAttribute('font-size', '9');
@@ -2264,81 +2283,119 @@
                 liveAircraftMarkers.appendChild(aircraftMarker);
             });
 
-            // Add status info with better positioning
+            // Add status info
             if (validAircraftCount > 0) {
-                const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                statusText.setAttribute('x', '20');
-                statusText.setAttribute('y', '25');
-                statusText.setAttribute('fill', '#50c878');
-                statusText.setAttribute('font-size', '14');
-                statusText.setAttribute('font-weight', 'bold');
-                statusText.setAttribute('stroke', '#000');
-                statusText.setAttribute('stroke-width', '1');
-                statusText.textContent = `✈️ ${validAircraftCount} Live Aircraft`;
-                liveAircraftMarkers.appendChild(statusText);
-
-                console.log(`📍 Tracking ${validAircraftCount} aircraft on live map`);
+                let statusText = liveAircraftMarkers.querySelector('#liveMapStatus');
+                if (!statusText) {
+                    statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    statusText.setAttribute('id', 'liveMapStatus');
+                    statusText.setAttribute('x', '20');
+                    statusText.setAttribute('y', '25');
+                    statusText.setAttribute('fill', '#50c878');
+                    statusText.setAttribute('font-size', '14');
+                    statusText.setAttribute('font-weight', 'bold');
+                    statusText.setAttribute('stroke', '#000');
+                    statusText.setAttribute('stroke-width', '1');
+                    liveAircraftMarkers.appendChild(statusText);
+                }
+                statusText.textContent = `✈️ ${validAircraftCount} Live Aircraft | Drag airports to reposition`;
             }
 
             updateLiveMapTransform();
+        }
+
+        async function loadAirportPositions() {
+            try {
+                const response = await fetch('/api/get_airport_positions');
+                airportPositions = await response.json();
+            } catch (error) {
+                console.log('Using default airport positions:', error);
+                // Default positions if file doesn't exist
+                airportPositions = {
+                    'IBAR': {'x': 600, 'y': 400}, 'IHEN': {'x': 650, 'y': 350}, 'ILAR': {'x': 550, 'y': 450},
+                    'IIAB': {'x': 700, 'y': 300}, 'IPAP': {'x': 400, 'y': 500}, 'IGRV': {'x': 680, 'y': 320}
+                };
+            }
+        }
+
+        async function saveAirportPosition(airport, x, y) {
+            try {
+                await fetch('/api/save_airport_position', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({airport, x, y})
+                });
+                console.log(`✅ Saved ${airport} position: (${x}, ${y})`);
+            } catch (error) {
+                console.error('Failed to save airport position:', error);
+            }
         }
 
         function addAirportMarkersToLiveMap() {
             const liveAircraftMarkers = document.getElementById('liveAircraftMarkers');
             if (!liveAircraftMarkers) return;
 
-            // Use same coordinate conversion as aircraft
-            const FIXED_BOUNDS = {
-                minX: -70000, maxX: 70000,
-                minY: -40000, maxY: 70000
-            };
+            // Remove existing airport markers
+            const existingAirports = liveAircraftMarkers.querySelectorAll('.airport-marker');
+            existingAirports.forEach(marker => marker.remove());
 
-            const mapWidth = 1200;
-            const mapHeight = 1200;
-            const mapPadding = 50;
-
-            // Add airport markers
+            // Add draggable airport markers
             Object.keys(AIRPORT_COORDINATES).forEach(airportCode => {
-                const airport = AIRPORT_COORDINATES[airportCode];
+                const position = airportPositions[airportCode] || {x: 600, y: 400};
                 
-                // Convert airport PTFS coordinates to map coordinates
-                const normalizedX = (airport.x - FIXED_BOUNDS.minX) / (FIXED_BOUNDS.maxX - FIXED_BOUNDS.minX);
-                const normalizedY = (airport.z - FIXED_BOUNDS.minY) / (FIXED_BOUNDS.maxY - FIXED_BOUNDS.minY);
+                const airportMarker = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                airportMarker.setAttribute('class', 'airport-marker');
+                airportMarker.setAttribute('data-airport', airportCode);
+                airportMarker.style.cursor = 'grab';
                 
-                const mapX = mapPadding + (normalizedX * (mapWidth - 2 * mapPadding));
-                const mapY = mapPadding + (normalizedY * (mapHeight - 2 * mapPadding));
-
-                // Check if airport is within visible bounds
-                if (mapX >= mapPadding && mapX <= mapWidth - mapPadding && 
-                    mapY >= mapPadding && mapY <= mapHeight - mapPadding) {
-                    
-                    const airportMarker = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                    
-                    // Airport circle
-                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                    circle.setAttribute('cx', mapX);
-                    circle.setAttribute('cy', mapY);
-                    circle.setAttribute('r', '4');
-                    circle.setAttribute('fill', '#ff6b35');
-                    circle.setAttribute('stroke', '#fff');
-                    circle.setAttribute('stroke-width', '1');
-                    
-                    // Airport code text
-                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    text.setAttribute('x', mapX);
-                    text.setAttribute('y', mapY - 8);
-                    text.setAttribute('text-anchor', 'middle');
-                    text.setAttribute('fill', '#ff6b35');
-                    text.setAttribute('font-size', '9');
-                    text.setAttribute('font-weight', 'bold');
-                    text.setAttribute('stroke', '#000');
-                    text.setAttribute('stroke-width', '0.5');
-                    text.textContent = airportCode;
-                    
-                    airportMarker.appendChild(circle);
-                    airportMarker.appendChild(text);
-                    liveAircraftMarkers.appendChild(airportMarker);
-                }
+                // Airport circle - larger and more visible
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', position.x);
+                circle.setAttribute('cy', position.y);
+                circle.setAttribute('r', '8');
+                circle.setAttribute('fill', '#ff6b35');
+                circle.setAttribute('stroke', '#fff');
+                circle.setAttribute('stroke-width', '3');
+                circle.setAttribute('opacity', '0.9');
+                
+                // Airport code text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', position.x);
+                text.setAttribute('y', position.y - 15);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#ff6b35');
+                text.setAttribute('font-size', '12');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('stroke', '#000');
+                text.setAttribute('stroke-width', '1');
+                text.textContent = airportCode;
+                
+                // Coordinate display
+                const coordText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                coordText.setAttribute('x', position.x);
+                coordText.setAttribute('y', position.y + 25);
+                coordText.setAttribute('text-anchor', 'middle');
+                coordText.setAttribute('fill', '#ccc');
+                coordText.setAttribute('font-size', '9');
+                coordText.setAttribute('stroke', '#000');
+                coordText.setAttribute('stroke-width', '0.5');
+                coordText.textContent = `(${position.x}, ${position.y})`;
+                
+                airportMarker.appendChild(circle);
+                airportMarker.appendChild(text);
+                airportMarker.appendChild(coordText);
+                
+                // Add drag functionality
+                airportMarker.addEventListener('mousedown', function(e) {
+                    if (!isDraggingAirport) {
+                        isDraggingAirport = true;
+                        draggedAirport = airportCode;
+                        airportMarker.style.cursor = 'grabbing';
+                        e.stopPropagation();
+                    }
+                });
+                
+                liveAircraftMarkers.appendChild(airportMarker);
             });
         }
 

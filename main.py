@@ -291,6 +291,59 @@ def get_aircraft_data():
     """Return live aircraft data from WebSocket"""
     return jsonify(aircraft_data)
 
+@app.route('/api/save_airport_position', methods=['POST'])
+def save_airport_position():
+    """Save airport position to file"""
+    try:
+        import json
+        import os
+        
+        data = request.json
+        airport_code = data.get('airport')
+        x = data.get('x')
+        y = data.get('y')
+        
+        if not all([airport_code, x is not None, y is not None]):
+            return jsonify({"success": False, "error": "Missing required fields"}), 400
+        
+        positions_file = os.path.join('static', 'maps', 'airport_positions.json')
+        
+        # Load existing positions
+        try:
+            with open(positions_file, 'r') as f:
+                positions = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            positions = {}
+        
+        # Update position
+        positions[airport_code] = {"x": int(x), "y": int(y)}
+        
+        # Save back to file
+        with open(positions_file, 'w') as f:
+            json.dump(positions, f, indent=2)
+        
+        return jsonify({"success": True, "message": f"Saved {airport_code} position"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/get_airport_positions')
+def get_airport_positions():
+    """Get all airport positions from file"""
+    try:
+        import json
+        import os
+        
+        positions_file = os.path.join('static', 'maps', 'airport_positions.json')
+        
+        try:
+            with open(positions_file, 'r') as f:
+                positions = json.load(f)
+            return jsonify(positions)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return jsonify({})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/static/maps/<path:filename>')
 def serve_map_file(filename):
     """Serve map files from the static/maps directory"""
