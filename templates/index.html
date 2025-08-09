@@ -2077,7 +2077,7 @@
                 // Convert and scale PTFS coordinates to map coordinates
                 // Center at (600,600) and scale to fit within map bounds
                 let mapX = mapCenterX + (ptfsX * scaleFactor);
-                let mapY = mapCenterY + (ptfsY * scaleFactor); // FLIPPED: Aircraft Y-axis only
+                let mapY = mapCenterY + (ptfsY * scaleFactor) - 402; // FLIPPED: Aircraft Y-axis only, moved up 402px
                 
                 // Ensure aircraft stay within map bounds with small buffer
                 mapX = Math.max(50, Math.min(1150, mapX));
