@@ -2069,10 +2069,10 @@
                 
                 // Convert PTFS coordinates to map coordinates
                 // Scale down by 100 (1px = 100 studs) and center on map
-                // In PTFS: -x is West, -y is North
-                // In SVG: +x is East, +y is South
+                // In PTFS: +x is East, +y is North
+                // In SVG: +x is East, +y is South (flipped from PTFS)
                 let mapX = mapCenterX + (ptfsX / 100);  // Direct conversion with centering
-                let mapY = mapCenterY - (ptfsY / 100);  // Flip Y axis and center
+                let mapY = mapCenterY + (ptfsY / 100);  // FIXED: Flip Y axis - add instead of subtract
                 
                 // Clamp to reasonable bounds for visibility
                 mapX = Math.max(50, Math.min(1150, mapX));
