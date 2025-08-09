@@ -896,6 +896,13 @@
         let lastFlightCount = 0;
         let currentFlightData = null;
 
+        // Custom map configurations
+        const CUSTOM_MAPS = {
+            'sectional_florida': '/static/maps/sectional_florida.png',
+            'enroute_low': '/static/maps/enroute_low_altitude.png',
+            'enroute_high': '/static/maps/enroute_high_altitude.png'
+        };
+
         // Airport coordinates for calculations
         const AIRPORT_COORDINATES = {
             'IBAR': {'x': -1250, 'z': 2100}, 'IHEN': {'x': -890, 'z': 1890}, 'ILAR': {'x': -1540, 'z': 2250},
@@ -1136,7 +1143,43 @@
             const departure = currentFlightData.departing;
             const arrival = currentFlightData.arriving;
             let distance = 'Unknown';
+            
+            // Try to load custom route map first
+            const routeMapFileName = `route_${departure}_${arrival}.svg`;
+            
+            fetch(`/static/maps/${routeMapFileName}`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        throw new Error(`Custom route map not found: ${routeMapFileName}`);
+                    }
+                })
+                .then(svgContent => {
+                    mapDiv.innerHTML = `
+                        <div style="height: 100%; display: flex; flex-direction: column;">
+                            <div style="text-align: center; margin-bottom: 10px;">
+                                <h4 style="color: #4a90e2; margin: 0;">${departure} ➜ ${arrival}</h4>
+                                <div style="font-size: 12px; color: #ccc;">Custom Route Chart</div>
+                            </div>
+                            <div style="flex: 1; overflow: hidden; display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.95); border-radius: 8px; padding: 10px;">
+                                <div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
+                                    ${svgContent.replace(/<svg([^>]*)>/, '<svg$1 style="max-width: 100%; max-height: 100%; width: auto; height: auto; background: white; border-radius: 4px;">')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    // Fallback to dynamic generation if custom map not found
+                    generateDynamicRouteMap(departure, arrival, distance);
+                });
+        }
+        
+        function generateDynamicRouteMap(departure, arrival, distance) {
 
+            const mapDiv = document.getElementById('routeMap');
+            
             // Generate dynamic flight path visualization
             if (AIRPORT_COORDINATES[departure] && AIRPORT_COORDINATES[arrival]) {
                 const depCoords = AIRPORT_COORDINATES[departure];

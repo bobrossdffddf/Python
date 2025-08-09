@@ -29,7 +29,9 @@ const customTileLayer = L.tileLayer('/static/maps/tiles/{z}/{x}/{y}.png');
 
 - Airport diagrams: `airport_diagram_[ICAO].svg`
 - Approach charts: `approach_[ICAO]_[RUNWAY].svg`
+- Route maps: `route_[DEPARTURE]_[ARRIVAL].svg`
 - Sectional charts: `sectional_[REGION].png`
+- Enroute charts: `enroute_[TYPE]_[REGION].png`
 - Custom overlays: `overlay_[NAME].svg`
 
 ## Examples
@@ -37,5 +39,8 @@ const customTileLayer = L.tileLayer('/static/maps/tiles/{z}/{x}/{y}.png');
 You can add files like:
 - `airport_diagram_IGRV.svg` - Grove Airport layout
 - `approach_ILAR_09L.svg` - Larnaca Airport approach chart
+- `route_IGRV_ILAR.svg` - Custom route from Grove to Larnaca
+- `route_IBAR_IPAP.svg` - Custom route from IBAR to IPAP
 - `sectional_florida.png` - Florida sectional chart
+- `enroute_low_southeast.png` - Low altitude enroute chart
 - `overlay_airspace.svg` - Airspace boundaries overlay
