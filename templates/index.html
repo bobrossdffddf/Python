@@ -474,6 +474,34 @@
             white-space: pre-line;
         }
 
+        .flight-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+        }
+
+        .info-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
         select option {
             background: #1a1a3e;
             color: #fff;
@@ -617,75 +645,69 @@
                 </div>
 
                 <div class="tools-section">
-                    <div class="tools-title">🛠️ Flight Planning & Analysis Tools</div>
-                    <div class="tools-grid">
-                        <div class="tool-category">
-                            <div class="tool-category-title">📊 Flight Analysis</div>
-                            <div class="tool-buttons">
-                                <button class="tool-button" onclick="calculateFuelBurn()">⛽ Fuel Calculation</button>
-                                <button class="tool-button" onclick="calculateWeight()">⚖️ Weight & Balance</button>
-                                <button class="tool-button" onclick="performanceAnalysis()">📈 Performance Analysis</button>
-                                <button class="tool-button" onclick="routeOptimization()">🎯 Route Optimization</button>
-                            </div>
-                            <div class="info-display" id="analysisDisplay">Select a tool to view flight analysis data...</div>
+            <div class="tools-title">📊 PTFS Game Statistics & Data</div>
+            <div class="tools-grid">
+                <div class="tool-category">
+                    <div class="tool-category-title">✈️ Flight Information</div>
+                    <div class="flight-info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Callsign</div>
+                            <div class="info-value" id="flightCallsign">-</div>
                         </div>
-
-                        <div class="tool-category">
-                            <div class="tool-category-title">🌤️ Weather & Environment</div>
-                            <div class="tool-buttons">
-                                <button class="tool-button" onclick="getWeatherData()">🌦️ Weather Report</button>
-                                <button class="tool-button" onclick="getWindsAloft()">💨 Winds Aloft</button>
-                                <button class="tool-button" onclick="getTurbulenceReport()">🌪️ Turbulence Report</button>
-                                <button class="tool-button" onclick="getVisibility()">👁️ Visibility Conditions</button>
-                            </div>
-                            <div class="info-display" id="weatherDisplay">Weather information will appear here...</div>
+                        <div class="info-item">
+                            <div class="info-label">Aircraft Type</div>
+                            <div class="info-value" id="flightAircraft">-</div>
                         </div>
-
-                        <div class="tool-category">
-                            <div class="tool-category-title">📡 Navigation & Communication</div>
-                            <div class="tool-buttons">
-                                <button class="tool-button" onclick="getNavAids()">🧭 Navigation Aids</button>
-                                <button class="tool-button" onclick="getFrequencies()">📻 ATC Frequencies</button>
-                                <button class="tool-button" onclick="getNotams()">⚠️ NOTAMs</button>
-                                <button class="tool-button" onclick="getAirspaceInfo()">🗺️ Airspace Information</button>
-                            </div>
-                            <div class="info-display" id="navDisplay">Navigation and communication data will be shown here...</div>
+                        <div class="info-item">
+                            <div class="info-label">Route</div>
+                            <div class="info-value" id="flightRoute">-</div>
                         </div>
-
-                        <div class="tool-category">
-                            <div class="tool-category-title">⏰ Time & Distance</div>
-                            <div class="tool-buttons">
-                                <button class="tool-button" onclick="calculateETA()">🕐 ETA Calculator</button>
-                                <button class="tool-button" onclick="calculateDistance()">📏 Distance Calculator</button>
-                                <button class="tool-button" onclick="getTimezones()">🌍 Timezone Information</button>
-                                <button class="tool-button" onclick="getSunriseSunset()">🌅 Sunrise/Sunset</button>
-                            </div>
-                            <div class="info-display" id="timeDisplay">Time and distance calculations will appear here...</div>
+                        <div class="info-item">
+                            <div class="info-label">Flight Level</div>
+                            <div class="info-value" id="flightLevel">-</div>
                         </div>
-
-                        <div class="tool-category">
-                            <div class="tool-category-title">📋 Documentation</div>
-                            <div class="tool-buttons">
-                                <button class="tool-button" onclick="generateFlightPlan()">📄 Generate Flight Plan</button>
-                                <button class="tool-button" onclick="exportData()">💾 Export Data</button>
-                                <button class="tool-button" onclick="printChecklists()">✅ Print Checklists</button>
-                                <button class="tool-button" onclick="logbookEntry()">📖 Logbook Entry</button>
-                            </div>
-                            <div class="info-display" id="docDisplay">Documentation tools and export options...</div>
+                        <div class="info-item">
+                            <div class="info-label">Departure</div>
+                            <div class="info-value" id="flightDeparture">-</div>
                         </div>
-
-                        <div class="tool-category">
-                            <div class="tool-category-title">🚨 Emergency & Safety</div>
-                            <div class="tool-buttons">
-                                <button class="tool-button" onclick="emergencyProcedures()">🆘 Emergency Procedures</button>
-                                <button class="tool-button" onclick="alternateAirports()">🏢 Alternate Airports</button>
-                                <button class="tool-button" onclick="fuelEmergency()">⛽ Fuel Emergency</button>
-                                <button class="tool-button" onclick="medicalEmergency()">🏥 Medical Emergency</button>
-                            </div>
-                            <div class="info-display" id="emergencyDisplay">Emergency procedures and safety information...</div>
+                        <div class="info-item">
+                            <div class="info-label">Arrival</div>
+                            <div class="info-value" id="flightArrival">-</div>
                         </div>
                     </div>
                 </div>
+
+                <div class="tool-category">
+                    <div class="tool-category-title">📏 Distance & Navigation</div>
+                    <div class="flight-info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Total Distance</div>
+                            <div class="info-value" id="totalDistance">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Distance from Departure</div>
+                            <div class="info-value" id="depDistance">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Distance to Arrival</div>
+                            <div class="info-value" id="arrDistance">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Estimated Flight Time</div>
+                            <div class="info-value" id="flightTime">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Progress</div>
+                            <div class="info-value" id="flightProgress">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Bearing</div>
+                            <div class="info-value" id="flightBearing">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
             </div>
         </div>
     </div>
@@ -865,6 +887,9 @@
 
             document.getElementById('modalTitle').textContent = `Flight ${callsign} - ${currentFlightData.aircraft}`;
 
+            // Update PTFS stats display
+            updatePTFSStats(currentFlightData);
+
             // Generate maps
             generateDepartureMap();
             generateRouteMap();
@@ -960,220 +985,58 @@
             `;
         }
 
-        // Tool Functions
-        function calculateFuelBurn() {
-            if (!currentFlightData) return;
-            const display = document.getElementById('analysisDisplay');
+        function updatePTFSStats(flight) {
+            document.getElementById('flightCallsign').textContent = flight.callsign || '-';
+            document.getElementById('flightAircraft').textContent = flight.aircraft || '-';
+            document.getElementById('flightRoute').textContent = flight.route || '-';
+            document.getElementById('flightLevel').textContent = `FL${flight.flightlevel}` || '-';
+            document.getElementById('flightDeparture').textContent = flight.departing || '-';
+            document.getElementById('flightArrival').textContent = flight.arriving || '-';
 
-            const departure = currentFlightData.departing;
-            const arrival = currentFlightData.arriving;
-            let analysis = `FUEL BURN CALCULATION\nFlight: ${currentFlightData.callsign}\nAircraft: ${currentFlightData.aircraft}\n\n`;
+            let totalDistance = 'N/A';
+            let depDistance = 'N/A';
+            let arrDistance = 'N/A';
+            let flightTime = 'N/A';
+            let flightProgress = 'N/A';
+            let flightBearing = 'N/A';
 
-            if (AIRPORT_COORDINATES[departure] && AIRPORT_COORDINATES[arrival]) {
-                const depCoords = AIRPORT_COORDINATES[departure];
-                const arrCoords = AIRPORT_COORDINATES[arrival];
+            if (AIRPORT_COORDINATES[flight.departing] && AIRPORT_COORDINATES[flight.arriving]) {
+                const depCoords = AIRPORT_COORDINATES[flight.departing];
+                const arrCoords = AIRPORT_COORDINATES[flight.arriving];
                 const dx = arrCoords.x - depCoords.x;
-                const dy = arrCoords.z - depCoords.z;
-                const distanceStuds = Math.sqrt(dx*dx + dy*dy);
+                const dz = arrCoords.z - depCoords.z;
+                const distanceStuds = Math.sqrt(dx*dx + dz*dz);
                 const distanceNM = distanceStuds / 3307.14286;
+                totalDistance = `${Math.round(distanceNM)} NM`;
 
-                analysis += `Distance: ${Math.round(distanceNM)} NM\n`;
-                analysis += `Flight Time: ${Math.round((distanceNM / 300) * 60)} minutes (estimated at 300 kts)`;
-            } else {
-                analysis += 'Distance calculation unavailable - unknown airports';
-            }
-
-            display.textContent = analysis;
-        }
-
-        function calculateWeight() {
-            if (!currentFlightData) return;
-            const display = document.getElementById('analysisDisplay');
-            display.textContent = `WEIGHT & BALANCE ANALYSIS\nFlight: ${currentFlightData.callsign}\nAircraft: ${currentFlightData.aircraft}\n\nReal weight and balance data not available.`;
-        }
-
-        function performanceAnalysis() {
-            if (!currentFlightData) return;
-            const display = document.getElementById('analysisDisplay');
-            display.textContent = `PERFORMANCE ANALYSIS\nFlight: ${currentFlightData.callsign}\nCruise Level: FL${currentFlightData.flightlevel}\n\nReal performance data not available.`;
-        }
-
-        function routeOptimization() {
-            if (!currentFlightData) return;
-            const display = document.getElementById('analysisDisplay');
-            display.textContent = `ROUTE OPTIMIZATION\nCurrent Route: ${currentFlightData.route || 'Direct'}\nDeparture: ${currentFlightData.departing}\nDestination: ${currentFlightData.arriving}\n\nRoute optimization data not available.`;
-        }
-
-        function getWeatherData() {
-            const display = document.getElementById('weatherDisplay');
-            display.textContent = `WEATHER REPORT\nReal weather data not available.\nConnect to external weather service for live data.`;
-        }
-
-        function getWindsAloft() {
-            const display = document.getElementById('weatherDisplay');
-            display.textContent = `WINDS ALOFT FORECAST\nReal winds aloft data not available.\nConnect to external weather service for live data.`;
-        }
-
-        function getTurbulenceReport() {
-            const display = document.getElementById('weatherDisplay');
-            display.textContent = `TURBULENCE REPORT\nReal turbulence data not available.\nConnect to external weather service for live data.`;
-        }
-
-        function getVisibility() {
-            const display = document.getElementById('weatherDisplay');
-            display.textContent = `VISIBILITY CONDITIONS\nReal visibility data not available.\nConnect to external weather service for live data.`;
-        }
-
-        function getNavAids() {
-            const display = document.getElementById('navDisplay');
-            display.textContent = `NAVIGATION AIDS\nReal navigation aid data not available.\nConnect to external navigation database for live data.`;
-        }
-
-        function getFrequencies() {
-            const display = document.getElementById('navDisplay');
-            display.textContent = `ATC FREQUENCIES\nReal frequency data not available.\nConnect to external aviation database for live data.`;
-        }
-
-        function getNotams() {
-            const display = document.getElementById('navDisplay');
-            display.textContent = `NOTICES TO AIRMEN (NOTAMs)\nReal NOTAM data not available.\nConnect to external NOTAM service for live data.`;
-        }
-
-        function getAirspaceInfo() {
-            const display = document.getElementById('navDisplay');
-            display.textContent = `AIRSPACE INFORMATION\nReal airspace data not available.\nConnect to external airspace database for live data.`;
-        }
-
-        function calculateETA() {
-            if (!currentFlightData) return;
-            const display = document.getElementById('timeDisplay');
-
-            const departure = currentFlightData.departing;
-            const arrival = currentFlightData.arriving;
-            let etaInfo = `ETA CALCULATOR\nFlight: ${currentFlightData.callsign}\nDeparture: ${departure}\nArrival: ${arrival}\n\n`;
-
-            if (AIRPORT_COORDINATES[departure] && AIRPORT_COORDINATES[arrival]) {
-                const depCoords = AIRPORT_COORDINATES[departure];
-                const arrCoords = AIRPORT_COORDINATES[arrival];
-                const dx = arrCoords.x - depCoords.x;
-                const dy = arrCoords.z - depCoords.z;
-                const distanceStuds = Math.sqrt(dx*dx + dy*dy);
-                const distanceNM = distanceStuds / 3307.14286;
+                if (flight.distance_to_departing !== undefined) {
+                    depDistance = `${flight.distance_to_departing.toLocaleString()} ft`;
+                }
+                if (flight.distance_to_arriving !== undefined) {
+                    arrDistance = `${flight.distance_to_arriving.toLocaleString()} ft`;
+                }
 
                 const groundSpeed = 300; // estimated knots
                 const flightTimeHours = distanceNM / groundSpeed;
-                const now = new Date();
-                const eta = new Date(now.getTime() + (flightTimeHours * 60 * 60 * 1000));
+                const hours = Math.floor(flightTimeHours);
+                const minutes = Math.round((flightTimeHours - hours) * 60);
+                flightTime = `${hours}h ${minutes}m`;
 
-                etaInfo += `Distance: ${Math.round(distanceNM)} NM\n`;
-                etaInfo += `Estimated Speed: ${groundSpeed} kts\n`;
-                etaInfo += `Flight Time: ${Math.round(flightTimeHours * 60)} minutes\n`;
-                etaInfo += `Current Time: ${now.toLocaleTimeString()}\n`;
-                etaInfo += `Estimated Arrival: ${eta.toLocaleTimeString()}`;
-            } else {
-                etaInfo += 'ETA calculation unavailable - unknown airport coordinates';
+                if (flight.distance_to_departing !== undefined && !isNaN(flight.distance_to_departing)) {
+                    const progressPercent = Math.max(0, 1 - (flight.distance_to_departing / (distanceStuds * 3.28084))) * 100;
+                    flightProgress = `${progressPercent.toFixed(1)}%`;
+                }
+
+                const bearingAngle = Math.atan2(dz, dx) * (180 / Math.PI);
+                flightBearing = `${(bearingAngle < 0 ? bearingAngle + 360 : bearingAngle).toFixed(0)}°`;
             }
 
-            display.textContent = etaInfo;
-        }
-
-        function calculateDistance() {
-            if (!currentFlightData) return;
-            const display = document.getElementById('timeDisplay');
-            const departure = currentFlightData.departing;
-            const arrival = currentFlightData.arriving;
-            
-            if (AIRPORT_COORDINATES[departure] && AIRPORT_COORDINATES[arrival]) {
-                const depCoords = AIRPORT_COORDINATES[departure];
-                const arrCoords = AIRPORT_COORDINATES[arrival];
-                const dx = arrCoords.x - depCoords.x;
-                const dy = arrCoords.z - depCoords.z;
-                const distanceStuds = Math.sqrt(dx*dx + dy*dy);
-                const distanceNM = distanceStuds / 3307.14286;
-
-                display.textContent = `DISTANCE CALCULATOR\nRoute: ${departure} → ${arrival}\n\nGreat Circle Distance: ${Math.round(distanceNM)} NM\n\nNote: This is direct distance calculation based on PTFS coordinates.`;
-            } else {
-                display.textContent = `DISTANCE CALCULATOR\nRoute: ${departure} → ${arrival}\n\nDistance calculation unavailable - unknown airport coordinates`;
-            }
-        }
-
-        function getTimezones() {
-            const display = document.getElementById('timeDisplay');
-            display.textContent = `TIMEZONE INFORMATION\nReal timezone data not available.\nConnect to external timezone service for live data.`;
-        }
-
-        function getSunriseSunset() {
-            const display = document.getElementById('timeDisplay');
-            display.textContent = `SUNRISE/SUNSET DATA\nReal sunrise/sunset data not available.\nConnect to external astronomical service for live data.`;
-        }
-
-        function generateFlightPlan() {
-            if (!currentFlightData) return;
-            const display = document.getElementById('docDisplay');
-
-            const flightPlan = `FLIGHT PLAN DOCUMENT\nGenerated: ${new Date().toLocaleString()}\n\nAircraft Information:\nCallsign: ${currentFlightData.callsign}\nAircraft Type: ${currentFlightData.aircraft}\nFlight Rules: IFR\n\nRoute Information:\nDeparture: ${currentFlightData.departing}\nDestination: ${currentFlightData.arriving}\nRoute: ${currentFlightData.route || 'Direct'}\nCruise Altitude: FL${currentFlightData.flightlevel}`;
-
-            display.textContent = flightPlan;
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(flightPlan).then(() => {
-                alert('Flight plan copied to clipboard!');
-            }).catch(() => {
-                console.log('Clipboard access not available');
-            });
-        }
-
-        function exportData() {
-            if (!currentFlightData) return;
-            const display = document.getElementById('docDisplay');
-
-            const exportData = {
-                flight: currentFlightData,
-                timestamp: new Date().toISOString(),
-                source: 'ATC Flight Monitor'
-            };
-
-            const jsonData = JSON.stringify(exportData, null, 2);
-            display.textContent = `DATA EXPORT\nFlight: ${currentFlightData.callsign}\n\nJSON format:\n${jsonData}`;
-
-            navigator.clipboard.writeText(jsonData).then(() => {
-                alert('Flight data copied to clipboard!');
-            }).catch(() => {
-                console.log('Clipboard access not available');
-            });
-        }
-
-        function printChecklists() {
-            const display = document.getElementById('docDisplay');
-            display.textContent = `FLIGHT CHECKLISTS\nGeneric checklist templates not available.\nUse aircraft-specific checklists for real operations.`;
-        }
-
-        function logbookEntry() {
-            if (!currentFlightData) return;
-            const display = document.getElementById('docDisplay');
-            const today = new Date();
-
-            display.textContent = `LOGBOOK ENTRY TEMPLATE\nDate: ${today.toLocaleDateString()}\n\nAircraft Type: ${currentFlightData.aircraft}\nDeparture: ${currentFlightData.departing}\nArrival: ${currentFlightData.arriving}\nRoute: ${currentFlightData.route || 'Direct'}\n\nNote: Complete with actual flight time and conditions.`;
-        }
-
-        function emergencyProcedures() {
-            const display = document.getElementById('emergencyDisplay');
-            display.textContent = `EMERGENCY PROCEDURES\nReal emergency procedures not available.\nRefer to aircraft-specific emergency checklists and procedures.`;
-        }
-
-        function alternateAirports() {
-            const display = document.getElementById('emergencyDisplay');
-            display.textContent = `ALTERNATE AIRPORTS\nReal alternate airport data not available.\nConnect to external aviation database for live airport information.`;
-        }
-
-        function fuelEmergency() {
-            const display = document.getElementById('emergencyDisplay');
-            display.textContent = `FUEL EMERGENCY PROCEDURES\nReal emergency procedures not available.\nRefer to aircraft-specific emergency checklists and procedures.`;
-        }
-
-        function medicalEmergency() {
-            const display = document.getElementById('emergencyDisplay');
-            display.textContent = `MEDICAL EMERGENCY PROCEDURES\nReal emergency procedures not available.\nRefer to aircraft-specific emergency checklists and procedures.`;
+            document.getElementById('totalDistance').textContent = totalDistance;
+            document.getElementById('depDistance').textContent = depDistance;
+            document.getElementById('arrDistance').textContent = arrDistance;
+            document.getElementById('flightTime').textContent = flightTime;
+            document.getElementById('flightProgress').textContent = flightProgress;
+            document.getElementById('flightBearing').textContent = flightBearing;
         }
 
         async function setAirportFilter(airport) {
