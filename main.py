@@ -72,7 +72,7 @@ def make_clearance(flightplan, runway="___"):
     return (
         f"{callsign}, cleared IFR to {arriving} airport as filed.\n"
         f"Clear for runway {runway}.\n"
-        f"Climb and maintain {flightlevel * 100} feet.\n"
+        f"Climb and maintain {flightlevel * 100} feet you will be communicating with:___.\n"
         f"After departure maintain heading\n"
         f"Squawk {squawk}.\n"
     )
