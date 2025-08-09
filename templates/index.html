@@ -2069,7 +2069,7 @@
                 
                 // Convert PTFS coordinates directly using 1px = 100 studs
                 let mapX = mapCenterX + (ptfsX / 100);  // Direct conversion
-                let mapY = mapCenterY - (ptfsY / 100);  // Flip Y (PTFS +Y is North, SVG +Y is down)
+                let mapY = mapCenterY + (ptfsY / 100);  // Fixed: No Y flip (both use same direction)
 
                 // Clamp to map bounds
                 mapX = Math.max(30, Math.min(1170, mapX));
