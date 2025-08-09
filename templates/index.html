@@ -2058,20 +2058,34 @@
                 
                 validAircraftCount++;
                 
-                // CORRECT coordinate conversion for PTFS to SVG
-                // PTFS coordinate system: -y is North, -x is West
-                // Your map SVG: 0,0 is top-left, 964x921 dimensions
-                // Scale: 1px = 100 studs (from your map config)
+                // FIXED coordinate conversion for PTFS to SVG
+                // PTFS coordinate system: -y is North (so positive Y values are South)
+                // Your map SVG: 0,0 is top-left, Y increases downward
+                // Based on the game world, we need to properly scale and orient
                 
-                const ptfsX = aircraftData.position.x; // PTFS X position
+                const ptfsX = aircraftData.position.x; // PTFS X position (-x is West)
                 const ptfsY = aircraftData.position.y; // PTFS Y position (-y is North)
                 
-                // Convert to SVG coordinates based on your map's actual coordinate system
-                // You may need to adjust these values based on your map's origin point
-                let mapX = 482 + (ptfsX / 100);      // Center of map + scaled position
-                let mapY = 460 - (ptfsY / 100);      // Center of map - scaled position (flip Y)
+                // Reverse the coordinate conversion - if Nitro 6691 should be at x272 y648 but appears "on top"
+                // We need to flip the Y calculation and adjust the scaling
                 
-                // Clamp to map bounds with some padding
+                // PTFS world bounds (approximate based on typical values)
+                const ptfsBounds = {
+                    minX: -4000,   // Western edge
+                    maxX: 1000,    // Eastern edge  
+                    minY: -2000,   // Southern edge (remember -y is North, so this is actually North)
+                    maxY: 25000    // Northern edge (this is actually South)
+                };
+                
+                // Normalize PTFS coordinates to 0-1 range
+                const normalizedX = (ptfsX - ptfsBounds.minX) / (ptfsBounds.maxX - ptfsBounds.minX);
+                const normalizedY = (ptfsY - ptfsBounds.minY) / (ptfsBounds.maxY - ptfsBounds.minY);
+                
+                // Convert to SVG coordinates (flip Y since PTFS -y is North, SVG +y is down)
+                let mapX = normalizedX * 964;           // Scale to map width
+                let mapY = (1 - normalizedY) * 921;     // Scale to map height and flip Y axis
+                
+                // Clamp to map bounds with padding
                 mapX = Math.max(30, Math.min(934, mapX));
                 mapY = Math.max(30, Math.min(891, mapY));
                 
@@ -2079,6 +2093,7 @@
                 debugInfo.push({
                     callsign,
                     ptfs: { x: ptfsX, y: ptfsY },
+                    normalized: { x: normalizedX.toFixed(3), y: normalizedY.toFixed(3) },
                     svg: { x: Math.round(mapX), y: Math.round(mapY) }
                 });
                 
@@ -2157,12 +2172,24 @@
                 debugText.setAttribute('font-size', '12');
                 debugText.setAttribute('stroke', '#000');
                 debugText.setAttribute('stroke-width', '0.5');
-                debugText.textContent = 'Scale: 1px = 100 studs | Center: 482,460';
+                debugText.textContent = 'PTFS Bounds: X(-4000,1000) Y(-2000,25000) | Y-axis flipped for North-up';
                 liveAircraftMarkers.appendChild(debugText);
+                
+                // Additional debug info
+                const debugText2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                debugText2.setAttribute('x', '20');
+                debugText2.setAttribute('y', '75');
+                debugText2.setAttribute('fill', '#4a90e2');
+                debugText2.setAttribute('font-size', '10');
+                debugText2.setAttribute('stroke', '#000');
+                debugText2.setAttribute('stroke-width', '0.5');
+                debugText2.textContent = 'Map: 964x921 | Coordinate system corrected for PTFS world';
+                liveAircraftMarkers.appendChild(debugText2);
                 
                 // Log first aircraft coordinates for debugging
                 if (debugInfo.length > 0) {
-                    console.log('🛩️ Aircraft coordinate conversion:', debugInfo[0]);
+                    console.log('🛩️ Fixed coordinate conversion:', debugInfo[0]);
+                    console.log('📍 All aircraft positions:', debugInfo.slice(0, 3)); // Show first 3 for debugging
                 }
             }
             
