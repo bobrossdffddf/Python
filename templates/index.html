@@ -442,6 +442,48 @@
             justify-content: center;
             align-items: center;
             background: rgba(255, 255, 255, 0.95);
+            position: relative;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(74, 144, 226, 0.9);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(74, 144, 226, 1);
+            transform: scale(1.1);
+        }
+
+        .zoomable-content {
+            transition: transform 0.3s ease;
+            transform-origin: center;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .clearance-section {
@@ -810,10 +852,7 @@
                             <div class="info-label">Distance to Arrival</div>
                             <div class="info-value" id="arrDistance">-</div>
                         </div>
-                        <div class="info-item">
-                            <div class="info-label">Estimated Flight Time</div>
-                            <div class="info-value" id="flightTime">-</div>
-                        </div>
+                        
                         <div class="info-item">
                             <div class="info-label">Progress</div>
                             <div class="info-value" id="flightProgress">-</div>
@@ -838,7 +877,14 @@
                 <span class="close" onclick="closeFullscreenMap()">&times;</span>
             </div>
             <div class="fullscreen-map" id="fullscreenMapContent">
-                <!-- Map content will be inserted here -->
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                    <button class="zoom-btn" onclick="zoomOut()">−</button>
+                    <button class="zoom-btn" onclick="resetZoom()">⌂</button>
+                </div>
+                <div class="zoomable-content" id="zoomableContent">
+                    <!-- Map content will be inserted here -->
+                </div>
             </div>
         </div>
     </div>
@@ -1089,8 +1135,8 @@
             const departure = currentFlightData.departing;
             const arrival = currentFlightData.arriving;
             let distance = 'Unknown';
-            let flightTime = 'Unknown';
 
+            // Generate dynamic flight path visualization
             if (AIRPORT_COORDINATES[departure] && AIRPORT_COORDINATES[arrival]) {
                 const depCoords = AIRPORT_COORDINATES[departure];
                 const arrCoords = AIRPORT_COORDINATES[arrival];
@@ -1100,34 +1146,88 @@
                 const distanceNM = distanceStuds / 3307.14286;
                 distance = `${Math.round(distanceNM)} NM`;
 
-                const timeHours = distanceNM / 300;
-                const hours = Math.floor(timeHours);
-                const minutes = Math.round((timeHours - hours) * 60);
-                flightTime = `${hours}h ${minutes}m`;
-            }
+                // Create SVG visualization with actual flight path
+                const svgWidth = 400;
+                const svgHeight = 200;
+                const padding = 50;
+                
+                // Normalize coordinates to fit in SVG
+                const minX = Math.min(depCoords.x, arrCoords.x) - 500;
+                const maxX = Math.max(depCoords.x, arrCoords.x) + 500;
+                const minZ = Math.min(depCoords.z, arrCoords.z) - 500;
+                const maxZ = Math.max(depCoords.z, arrCoords.z) + 500;
+                
+                const scaleX = (svgWidth - 2 * padding) / (maxX - minX);
+                const scaleZ = (svgHeight - 2 * padding) / (maxZ - minZ);
+                const scale = Math.min(scaleX, scaleZ);
+                
+                const depX = padding + (depCoords.x - minX) * scale;
+                const depY = padding + (depCoords.z - minZ) * scale;
+                const arrX = padding + (arrCoords.x - minX) * scale;
+                const arrY = padding + (arrCoords.z - minZ) * scale;
 
-            mapDiv.innerHTML = `
-                <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; width: 90%; margin-bottom: 15px;">
-                        <div style="background: #50c878; padding: 8px 12px; border-radius: 6px; color: white; font-weight: bold; font-size: 12px;">
-                            🛫 ${departure}
+                mapDiv.innerHTML = `
+                    <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <svg width="${svgWidth}" height="${svgHeight}" style="background: #1a1a3e; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);">
+                            <!-- Flight path line -->
+                            <line x1="${depX}" y1="${depY}" x2="${arrX}" y2="${arrY}" 
+                                  stroke="#4a90e2" stroke-width="3" stroke-dasharray="5,5">
+                                <animate attributeName="stroke-dashoffset" values="0;-10" dur="2s" repeatCount="indefinite"/>
+                            </line>
+                            
+                            <!-- Departure airport -->
+                            <circle cx="${depX}" cy="${depY}" r="8" fill="#50c878" stroke="white" stroke-width="2"/>
+                            <text x="${depX}" y="${depY - 15}" text-anchor="middle" fill="#50c878" font-size="12" font-weight="bold">${departure}</text>
+                            
+                            <!-- Arrival airport -->
+                            <circle cx="${arrX}" cy="${arrY}" r="8" fill="#f44336" stroke="white" stroke-width="2"/>
+                            <text x="${arrX}" y="${arrY - 15}" text-anchor="middle" fill="#f44336" font-size="12" font-weight="bold">${arrival}</text>
+                            
+                            <!-- Aircraft icon (moving along path) -->
+                            <g>
+                                <path d="M-6,-2 L6,0 L-6,2 Z" fill="#ffff00" transform="translate(${depX},${depY}) rotate(${Math.atan2(arrY - depY, arrX - depX) * 180 / Math.PI})">
+                                    <animateTransform attributeName="transform" type="translate"
+                                                    values="${depX},${depY};${arrX},${arrY};${depX},${depY}"
+                                                    dur="8s" repeatCount="indefinite"/>
+                                </path>
+                            </g>
+                            
+                            <!-- Flight level indicator -->
+                            <text x="${(depX + arrX) / 2}" y="${(depY + arrY) / 2 - 10}" text-anchor="middle" 
+                                  fill="#4a90e2" font-size="11" font-weight="bold">FL${currentFlightData.flightlevel}</text>
+                        </svg>
+                        
+                        <div style="font-size: 11px; color: #ccc; text-align: center; line-height: 1.4; margin-top: 10px;">
+                            Distance: ${distance}<br>
+                            Route: ${currentFlightData.route || 'Direct'}<br>
+                            <span style="color: #4a90e2;">● Live Flight Path Visualization</span>
                         </div>
-                        <div style="flex: 1; height: 3px; background: linear-gradient(90deg, #50c878, #4a90e2, #f44336); margin: 0 15px; position: relative;">
-                            <div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: #4a90e2; padding: 4px 8px; border-radius: 4px; font-size: 10px; color: white;">
-                                ✈️ FL${currentFlightData.flightlevel}
+                    </div>
+                `;
+            } else {
+                // Fallback for unknown airports
+                mapDiv.innerHTML = `
+                    <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; width: 90%; margin-bottom: 15px;">
+                            <div style="background: #50c878; padding: 8px 12px; border-radius: 6px; color: white; font-weight: bold; font-size: 12px;">
+                                🛫 ${departure}
+                            </div>
+                            <div style="flex: 1; height: 3px; background: linear-gradient(90deg, #50c878, #4a90e2, #f44336); margin: 0 15px; position: relative;">
+                                <div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: #4a90e2; padding: 4px 8px; border-radius: 4px; font-size: 10px; color: white;">
+                                    ✈️ FL${currentFlightData.flightlevel}
+                                </div>
+                            </div>
+                            <div style="background: #f44336; padding: 8px 12px; border-radius: 6px; color: white; font-weight: bold; font-size: 12px;">
+                                🛬 ${arrival}
                             </div>
                         </div>
-                        <div style="background: #f44336; padding: 8px 12px; border-radius: 6px; color: white; font-weight: bold; font-size: 12px;">
-                            🛬 ${arrival}
+                        <div style="font-size: 11px; color: #ccc; text-align: center; line-height: 1.4;">
+                            Distance: ${distance}<br>
+                            Route: ${currentFlightData.route || 'Direct'}
                         </div>
                     </div>
-                    <div style="font-size: 11px; color: #ccc; text-align: center; line-height: 1.4;">
-                        Distance: ${distance}<br>
-                        Est. Time: ${flightTime}<br>
-                        Route: ${currentFlightData.route || 'Direct'}
-                    </div>
-                </div>
-            `;
+                `;
+            }
         }
 
         function generateArrivalMap() {
@@ -1189,7 +1289,6 @@
             let totalDistance = 'N/A';
             let depDistance = 'N/A';
             let arrDistance = 'N/A';
-            let flightTime = 'N/A';
             let flightProgress = 'N/A';
             let flightBearing = 'N/A';
 
@@ -1209,12 +1308,6 @@
                     arrDistance = `${flight.distance_to_arriving.toLocaleString()} ft`;
                 }
 
-                const groundSpeed = 300; // estimated knots
-                const flightTimeHours = distanceNM / groundSpeed;
-                const hours = Math.floor(flightTimeHours);
-                const minutes = Math.round((flightTimeHours - hours) * 60);
-                flightTime = `${hours}h ${minutes}m`;
-
                 if (flight.distance_to_departing !== undefined && !isNaN(flight.distance_to_departing)) {
                     const progressPercent = Math.max(0, 1 - (flight.distance_to_departing / (distanceStuds * 3.28084))) * 100;
                     flightProgress = `${progressPercent.toFixed(1)}%`;
@@ -1227,7 +1320,6 @@
             document.getElementById('totalDistance').textContent = totalDistance;
             document.getElementById('depDistance').textContent = depDistance;
             document.getElementById('arrDistance').textContent = arrDistance;
-            document.getElementById('flightTime').textContent = flightTime;
             document.getElementById('flightProgress').textContent = flightProgress;
             document.getElementById('flightBearing').textContent = flightBearing;
         }
@@ -1295,10 +1387,12 @@
             }
         }
 
+        let currentZoom = 1;
+
         function openFullscreenMap(mapType, title) {
             const sourceMap = document.getElementById(mapType + 'Map');
             const fullscreenOverlay = document.getElementById('fullscreenOverlay');
-            const fullscreenContent = document.getElementById('fullscreenMapContent');
+            const zoomableContent = document.getElementById('zoomableContent');
             const fullscreenTitle = document.getElementById('fullscreenTitle');
             
             // Clone the map content
@@ -1315,13 +1409,33 @@
                 svg.style.maxHeight = 'none';
             });
             
-            fullscreenContent.innerHTML = '';
-            fullscreenContent.appendChild(mapContent);
+            zoomableContent.innerHTML = '';
+            zoomableContent.appendChild(mapContent);
             fullscreenTitle.textContent = title;
+            
+            // Reset zoom
+            currentZoom = 1;
+            zoomableContent.style.transform = `scale(${currentZoom})`;
+            
             fullscreenOverlay.style.display = 'block';
             
             // Prevent body scrolling
             document.body.style.overflow = 'hidden';
+        }
+
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom * 1.25, 5);
+            document.getElementById('zoomableContent').style.transform = `scale(${currentZoom})`;
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom / 1.25, 0.5);
+            document.getElementById('zoomableContent').style.transform = `scale(${currentZoom})`;
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            document.getElementById('zoomableContent').style.transform = `scale(${currentZoom})`;
         }
 
         function closeFullscreenMap() {
