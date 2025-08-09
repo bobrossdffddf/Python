@@ -7,11 +7,11 @@ const MAP_CONFIG = {
     gameMapPath: '/static/maps/game_map.svg',
     
     // Actual SVG map dimensions from your file
-    mapWidth: 964,
-    mapHeight: 921,
+    mapWidth: 1200,
+    mapHeight: 1200,
     
     // SVG viewBox matches your map's actual viewBox
-    viewBox: "0 0 964 921", // x, y, width, height
+    viewBox: "0 0 1200 1200", // x, y, width, height
     
     // Coordinate system: Direct pixel mapping to your SVG
     coordinateScale: 1, // 1 SVG pixel = 1 pixel on your map
