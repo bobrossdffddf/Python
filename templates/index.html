@@ -754,20 +754,61 @@
             font-size: 0.9rem;
         }
 
+        .generator-content {
+            display: grid;
+            gap: 25px;
+        }
+
+        .template-input {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .template-input label {
+            color: #50c878;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .clearance-template-textarea {
+            width: 100%;
+            min-height: 180px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            color: #ffffff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .clearance-template-textarea:focus {
+            border-color: #50c878;
+            box-shadow: 0 0 0 3px rgba(80, 200, 120, 0.2);
+        }
+
+        .clearance-template-textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
         .variable-buttons {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 12px;
-            margin-bottom: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
         }
 
         .var-btn {
-            padding: 10px 15px;
+            padding: 8px 12px;
             background: linear-gradient(135deg, #4a90e2, #357abd);
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             color: white;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -775,16 +816,15 @@
         }
 
         .var-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);
             background: linear-gradient(135deg, #357abd, #2e5a8a);
         }
 
         .template-actions {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: 2fr 1fr 1fr 1fr;
             gap: 15px;
-            margin-bottom: 25px;
         }
 
         .template-actions button {
@@ -796,6 +836,12 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #ff6b35, #e55a2b) !important;
+            font-size: 1rem !important;
         }
 
         .template-actions button:hover {
@@ -803,48 +849,36 @@
             box-shadow: 0 6px 20px rgba(80, 200, 120, 0.4);
         }
 
-        .generated-output {
+        .primary-btn:hover {
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4) !important;
+        }
+
+        .preview-output {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px;
             padding: 20px;
         }
 
-        .generated-output label {
-            color: #50c878;
+        .preview-output label {
+            color: #4a90e2;
             font-weight: 600;
             margin-bottom: 10px;
             display: block;
+            font-size: 0.9rem;
         }
 
-        .clearance-output {
+        .clearance-preview {
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             padding: 15px;
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.6;
             color: #e3f2fd;
-            min-height: 100px;
+            min-height: 80px;
             white-space: pre-line;
-            margin-bottom: 15px;
-        }
-
-        .copy-btn {
-            background: linear-gradient(135deg, #ff6b35, #e55a2b);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            padding: 8px 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .copy-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
         }
 
         .mouse-coordinates {
@@ -995,43 +1029,51 @@
                 <label>⚙️ Actions</label>
                 <button onclick="clearHistory()">🗑️ Clear History</button>
             </div>
-            <div class="control-group">
-                <label>📝 Clearance Generator</label>
-                <textarea id="clearanceGenerator" placeholder="Type your clearance template using variables like [Callsign], [Airports], [Flightlevel]..." rows="3"></textarea>
-            </div>
+            
         </div>
 
         <!-- Clearance Generator Section -->
         <div class="clearance-generator-section">
             <div class="generator-header">
-                <h3>📝 Clearance Generator with Variables</h3>
-                <p>Use variables in your clearance templates and click buttons to insert them</p>
+                <h3>📝 Clearance Generator</h3>
+                <p>Create clearance templates using variables - generated clearances will be applied to all flights</p>
             </div>
             
-            <div class="variable-buttons">
-                <button class="var-btn" onclick="insertVariable('[Callsign]')" title="Aircraft callsign">✈️ [Callsign]</button>
-                <button class="var-btn" onclick="insertVariable('[Airports]')" title="Departure-Arrival airports">🏢 [Airports]</button>
-                <button class="var-btn" onclick="insertVariable('[Flightlevel]')" title="Flight level (e.g., FL350)">📊 [Flightlevel]</button>
-                <button class="var-btn" onclick="insertVariable('[Squawk]')" title="Transponder squawk code">📡 [Squawk]</button>
-                <button class="var-btn" onclick="insertVariable('[Route]')" title="Flight route">🗺️ [Route]</button>
-                <button class="var-btn" onclick="insertVariable('[Runway]')" title="Active runway">🛬 [Runway]</button>
-                <button class="var-btn" onclick="insertVariable('[Aircraft]')" title="Aircraft type">🛩️ [Aircraft]</button>
-                <button class="var-btn" onclick="insertVariable('[Frequency]')" title="Radio frequency">📻 [Frequency]</button>
-                <button class="var-btn" onclick="insertVariable('[Time]')" title="Current time">⏰ [Time]</button>
-                <button class="var-btn" onclick="insertVariable('[Weather]')" title="Weather conditions">🌤️ [Weather]</button>
-            </div>
+            <div class="generator-content">
+                <div class="template-input">
+                    <label for="clearanceTemplate">Clearance Template:</label>
+                    <textarea id="clearanceTemplate" class="clearance-template-textarea" 
+                        placeholder="Enter your clearance template here...
 
-            <div class="template-actions">
-                <button onclick="generateFromTemplate()">🎯 Generate Clearance</button>
-                <button onclick="clearTemplate()">🗑️ Clear Template</button>
-                <button onclick="saveTemplate()">💾 Save Template</button>
-                <button onclick="loadTemplate()">📁 Load Template</button>
-            </div>
+Example:
+[Callsign], cleared IFR to [Airports] as filed.
+Climb and maintain [Flightlevel], expect higher in 10 minutes.
+Departure frequency 121.9, squawk [Squawk].
+Runway [Runway] cleared for takeoff." rows="8"></textarea>
+                </div>
 
-            <div class="generated-output">
-                <label>Generated Clearance:</label>
-                <div id="generatedClearance" class="clearance-output"></div>
-                <button onclick="copyToClipboard()" class="copy-btn">📋 Copy to Clipboard</button>
+                <div class="variable-buttons">
+                    <button class="var-btn" onclick="insertVariable('[Callsign]')" title="Aircraft callsign">✈️ [Callsign]</button>
+                    <button class="var-btn" onclick="insertVariable('[Airports]')" title="Departure-Arrival airports">🏢 [Airports]</button>
+                    <button class="var-btn" onclick="insertVariable('[Flightlevel]')" title="Flight level">📊 [Flightlevel]</button>
+                    <button class="var-btn" onclick="insertVariable('[Squawk]')" title="Transponder code">📡 [Squawk]</button>
+                    <button class="var-btn" onclick="insertVariable('[Route]')" title="Flight route">🗺️ [Route]</button>
+                    <button class="var-btn" onclick="insertVariable('[Runway]')" title="Active runway">🛬 [Runway]</button>
+                    <button class="var-btn" onclick="insertVariable('[Aircraft]')" title="Aircraft type">🛩️ [Aircraft]</button>
+                    <button class="var-btn" onclick="insertVariable('[Time]')" title="Current time">⏰ [Time]</button>
+                </div>
+
+                <div class="template-actions">
+                    <button onclick="generateAndApplyToAll()" class="primary-btn">🎯 Generate & Apply to All Flights</button>
+                    <button onclick="clearTemplate()">🗑️ Clear</button>
+                    <button onclick="saveTemplate()">💾 Save</button>
+                    <button onclick="loadTemplate()">📁 Load</button>
+                </div>
+
+                <div class="preview-output">
+                    <label>Preview (using sample data):</label>
+                    <div id="previewClearance" class="clearance-preview"></div>
+                </div>
             </div>
         </div>
 
@@ -2625,7 +2667,7 @@
 
         // Clearance Generator Functions
         function insertVariable(variable) {
-            const textarea = document.getElementById('clearanceGenerator');
+            const textarea = document.getElementById('clearanceTemplate');
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
             const text = textarea.value;
@@ -2633,41 +2675,69 @@
             textarea.value = text.substring(0, start) + variable + text.substring(end);
             textarea.selectionStart = textarea.selectionEnd = start + variable.length;
             textarea.focus();
+            
+            // Update preview
+            updatePreview();
         }
 
-        function generateFromTemplate() {
-            const template = document.getElementById('clearanceGenerator').value;
+        function updatePreview() {
+            const template = document.getElementById('clearanceTemplate').value;
+            if (!template.trim()) {
+                document.getElementById('previewClearance').textContent = 'Enter a template above to see preview...';
+                return;
+            }
+
+            let preview = template;
+            const currentTime = new Date().toLocaleTimeString([], {hour12: true, hour: '2-digit', minute: '2-digit'});
+            const currentRunway = document.getElementById('runwayInput').value || '___';
+            
+            // Replace variables with sample data for preview
+            preview = preview.replace(/\[Callsign\]/g, 'ABC123');
+            preview = preview.replace(/\[Airports\]/g, 'IBAR-IHEN');
+            preview = preview.replace(/\[Flightlevel\]/g, 'FL350');
+            preview = preview.replace(/\[Squawk\]/g, '1234');
+            preview = preview.replace(/\[Route\]/g, 'DIRECT');
+            preview = preview.replace(/\[Runway\]/g, currentRunway);
+            preview = preview.replace(/\[Aircraft\]/g, 'B738');
+            preview = preview.replace(/\[Time\]/g, currentTime);
+
+            document.getElementById('previewClearance').textContent = preview;
+        }
+
+        async function generateAndApplyToAll() {
+            const template = document.getElementById('clearanceTemplate').value;
             if (!template.trim()) {
                 alert('Please enter a clearance template first!');
                 return;
             }
 
-            let generated = template;
-            const currentTime = new Date().toLocaleTimeString([], {hour12: true, hour: '2-digit', minute: '2-digit'});
-            const currentRunway = document.getElementById('runwayInput').value || '___';
-            
-            // Replace variables with sample or real data
-            generated = generated.replace(/\[Callsign\]/g, 'ABC123');
-            generated = generated.replace(/\[Airports\]/g, 'IBAR-IHEN');
-            generated = generated.replace(/\[Flightlevel\]/g, 'FL350');
-            generated = generated.replace(/\[Squawk\]/g, generateSquawk());
-            generated = generated.replace(/\[Route\]/g, 'DIRECT');
-            generated = generated.replace(/\[Runway\]/g, currentRunway);
-            generated = generated.replace(/\[Aircraft\]/g, 'B738');
-            generated = generated.replace(/\[Frequency\]/g, '121.9');
-            generated = generated.replace(/\[Time\]/g, currentTime);
-            generated = generated.replace(/\[Weather\]/g, 'VFR CONDITIONS');
-
-            // If we have current flight data, use real values
-            if (currentFlightData) {
-                generated = generated.replace(/ABC123/g, currentFlightData.callsign);
-                generated = generated.replace(/IBAR-IHEN/g, `${currentFlightData.departing}-${currentFlightData.arriving}`);
-                generated = generated.replace(/FL350/g, `FL${currentFlightData.flightlevel}`);
-                generated = generated.replace(/DIRECT/g, currentFlightData.route || 'DIRECT');
-                generated = generated.replace(/B738/g, currentFlightData.aircraft);
+            if (!confirm('This will generate and apply clearances to ALL flights in the system. Continue?')) {
+                return;
             }
 
-            document.getElementById('generatedClearance').textContent = generated;
+            try {
+                const response = await fetch('/api/generate_clearances_for_all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        template: template,
+                        runway: document.getElementById('runwayInput').value || '___'
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Generated clearances for ${result.count} flights!`);
+                    updateData(); // Refresh the display
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error generating clearances:', error);
+                alert('Error generating clearances. Please try again.');
+            }
         }
 
         function generateSquawk() {
@@ -2679,13 +2749,13 @@
 
         function clearTemplate() {
             if (confirm('Clear the current template?')) {
-                document.getElementById('clearanceGenerator').value = '';
-                document.getElementById('generatedClearance').textContent = '';
+                document.getElementById('clearanceTemplate').value = '';
+                document.getElementById('previewClearance').textContent = 'Enter a template above to see preview...';
             }
         }
 
         function saveTemplate() {
-            const template = document.getElementById('clearanceGenerator').value;
+            const template = document.getElementById('clearanceTemplate').value;
             if (!template.trim()) {
                 alert('Please enter a template to save!');
                 return;
@@ -2714,33 +2784,22 @@
             const index = parseInt(choice) - 1;
 
             if (index >= 0 && index < savedTemplates.length) {
-                document.getElementById('clearanceGenerator').value = savedTemplates[index].template;
+                document.getElementById('clearanceTemplate').value = savedTemplates[index].template;
+                updatePreview();
                 alert(`Template "${savedTemplates[index].name}" loaded!`);
             } else {
                 alert('Invalid template number!');
             }
         }
 
-        function copyToClipboard() {
-            const text = document.getElementById('generatedClearance').textContent;
-            if (!text.trim()) {
-                alert('No clearance to copy! Generate one first.');
-                return;
+        // Update preview when template changes
+        document.addEventListener('DOMContentLoaded', function() {
+            const templateTextarea = document.getElementById('clearanceTemplate');
+            if (templateTextarea) {
+                templateTextarea.addEventListener('input', updatePreview);
+                templateTextarea.addEventListener('change', updatePreview);
             }
-
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Clearance copied to clipboard!');
-            }).catch(() => {
-                // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                alert('Clearance copied to clipboard!');
-            });
-        }
+        });
 
         // Update flight modal to use generator data
         function openFlightModal(callsign) {

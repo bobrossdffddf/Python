@@ -230,6 +230,56 @@ def generate_clearance():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
+def make_clearance_from_template(template, flight, runway="___"):
+    """Generate clearance from template with variable substitution"""
+    clearance = template
+    
+    # Get current time
+    current_time = datetime.now().strftime("%H:%M")
+    
+    # Replace variables with flight data
+    clearance = clearance.replace('[Callsign]', flight['callsign'])
+    clearance = clearance.replace('[Airports]', f"{flight['departing']}-{flight['arriving']}")
+    clearance = clearance.replace('[Flightlevel]', f"FL{flight['flightlevel']}")
+    clearance = clearance.replace('[Squawk]', generate_squawk())
+    clearance = clearance.replace('[Route]', flight.get('route', 'DIRECT'))
+    clearance = clearance.replace('[Runway]', runway)
+    clearance = clearance.replace('[Aircraft]', flight['aircraft'])
+    clearance = clearance.replace('[Time]', current_time)
+    
+    return clearance
+
+@app.route('/api/generate_clearances_for_all', methods=['POST'])
+def generate_clearances_for_all():
+    try:
+        data = request.json
+        template = data.get('template', '')
+        runway = data.get('runway', '___')
+        
+        if not template.strip():
+            return jsonify({"success": False, "error": "Template cannot be empty"}), 400
+        
+        count = 0
+        # Apply clearances to all flights in history
+        for flight in flights_history:
+            # Only apply to departing flights (skip arriving flights to filtered airport)
+            if current_airport_filter:
+                if flight["departing"] == current_airport_filter:
+                    flight["clearance"] = make_clearance_from_template(template, flight, runway)
+                    count += 1
+            else:
+                flight["clearance"] = make_clearance_from_template(template, flight, runway)
+                count += 1
+        
+        status_log.append({
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "message": f"Generated clearances for {count} flights using custom template"
+        })
+        
+        return jsonify({"success": True, "count": count, "message": f"Generated clearances for {count} flights"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/update_runway', methods=['POST'])
 def update_runway():
     """Update runway for existing flights"""
