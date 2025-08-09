@@ -2062,25 +2062,18 @@
                 const ptfsX = aircraftData.position.x; // PTFS X position
                 const ptfsY = aircraftData.position.y; // PTFS Y position
 
-                // Simple 1:100 conversion - YOUR ORIGINAL INSTRUCTION
-                // Map center adjustment - assuming map center is at game coordinate 0,0
-                // Fixed coordinate conversion based on your calibration data
-                // Target: PTFS (-46630, 27566) should map to SVG (290, 623)
+                // API Specification: 1px = 100 studs, 0,0 game = 0,0 SVG
+                // Aircraft position: -y is North, -x is West
                 
-                // Calculate the proper offset and scale
-                // Using your reference point: PTFS (-46630, 27566) → SVG (290, 623)
-                const referenceX = -46630;
-                const referenceY = 27566;
-                const targetSvgX = 290;
-                const targetSvgY = 623;
+                // Direct conversion as per API docs
+                // Convert studs to pixels (divide by 100)
+                // Handle coordinate system: -x is West, -y is North
+                let mapX = -ptfsX / 100;  // -x is West, so negate for SVG coordinates
+                let mapY = -ptfsY / 100;  // -y is North, so negate for SVG coordinates
                 
-                // Direct mapping with calibrated offsets
-                let mapX = targetSvgX + ((ptfsX - referenceX) / 100);
-                let mapY = targetSvgY + ((referenceY - ptfsY) / 100);  // Y flipped relative to reference
-                
-                // Clamp to map bounds
-                mapX = Math.max(30, Math.min(1170, mapX));
-                mapY = Math.max(30, Math.min(1170, mapY));
+                // Clamp to map bounds (1200x1200 as per your map)
+                mapX = Math.max(0, Math.min(1200, mapX));
+                mapY = Math.max(0, Math.min(1200, mapY));
 
                 // Store debug info
                 debugInfo.push({
