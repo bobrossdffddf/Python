@@ -2067,9 +2067,13 @@
                 const mapCenterX = 600; // Half of 1200
                 const mapCenterY = 600; // Half of 1200
                 
-                // Convert PTFS coordinates directly using 1px = 100 studs
-                let mapX = mapCenterX + (ptfsX / 100);  // Direct conversion
-                let mapY = mapCenterY + (ptfsY / 100);  // Fixed: No Y flip (both use same direction)
+                // Adjusted coordinate conversion based on calibration
+                // Original: PTFS (-46630, 27566) → SVG (134, 876)
+                // Target: PTFS (-46630, 27566) → SVG (290, 623)
+                
+                // Calculate offset and scale adjustments
+                let mapX = mapCenterX + (ptfsX / 100) + 156;  // Added offset to shift right
+                let mapY = mapCenterY - (ptfsY / 100) - 253;  // Flipped Y and added offset
 
                 // Clamp to map bounds
                 mapX = Math.max(30, Math.min(1170, mapX));
