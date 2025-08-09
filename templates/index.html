@@ -2044,10 +2044,13 @@
             liveFlightPaths.innerHTML = '';
             liveAircraftMarkers.innerHTML = '';
             
-            // Get all aircraft (don't limit to prevent missing aircraft)
+            // Get all aircraft
             const aircraftList = Object.keys(liveAircraftData);
             let validAircraftCount = 0;
-            const usedPositions = new Set(); // Track used positions to prevent overlap
+            const usedPositions = new Set();
+            
+            // Debug info to help calibrate coordinates
+            const debugInfo = [];
             
             aircraftList.forEach(callsign => {
                 const aircraftData = liveAircraftData[callsign];
@@ -2055,67 +2058,76 @@
                 
                 validAircraftCount++;
                 
-                // Better coordinate conversion based on PTFS coordinate system
-                // PTFS uses: -y is North, -x is West, with center around (0, 0)
-                // Map SVG is 964x921 with (0,0) at top-left
+                // CORRECT coordinate conversion for PTFS to SVG
+                // PTFS coordinate system: -y is North, -x is West
+                // Your map SVG: 0,0 is top-left, 964x921 dimensions
+                // Scale: 1px = 100 studs (from your map config)
                 
-                // Scale factor: 1px = 100 studs according to your map specs
-                const scaleX = 964 / 8000;  // Assuming map covers ~8000 stud width
-                const scaleY = 921 / 8000;  // Assuming map covers ~8000 stud height
+                const ptfsX = aircraftData.position.x; // PTFS X position
+                const ptfsY = aircraftData.position.y; // PTFS Y position (-y is North)
                 
-                // Convert PTFS coordinates to SVG coordinates
-                let mapX = 482 + (aircraftData.position.x * scaleX);  // Center + scaled X
-                let mapY = 460 - (aircraftData.position.y * scaleY);  // Center - scaled Y (flip Y axis)
+                // Convert to SVG coordinates based on your map's actual coordinate system
+                // You may need to adjust these values based on your map's origin point
+                let mapX = 482 + (ptfsX / 100);      // Center of map + scaled position
+                let mapY = 460 - (ptfsY / 100);      // Center of map - scaled position (flip Y)
                 
-                // Ensure coordinates are within map bounds
-                mapX = Math.max(20, Math.min(944, mapX));
-                mapY = Math.max(20, Math.min(901, mapY));
+                // Clamp to map bounds with some padding
+                mapX = Math.max(30, Math.min(934, mapX));
+                mapY = Math.max(30, Math.min(891, mapY));
                 
-                // Check for position conflicts and adjust if needed
-                const posKey = `${Math.round(mapX/10)}_${Math.round(mapY/10)}`;
+                // Store debug info
+                debugInfo.push({
+                    callsign,
+                    ptfs: { x: ptfsX, y: ptfsY },
+                    svg: { x: Math.round(mapX), y: Math.round(mapY) }
+                });
+                
+                // Handle position conflicts
+                const posKey = `${Math.round(mapX/20)}_${Math.round(mapY/20)}`;
                 let offset = 0;
                 while (usedPositions.has(`${posKey}_${offset}`)) {
-                    offset += 15; // Offset by 15 pixels if position is taken
-                    if (offset > 45) break; // Maximum 3 aircraft in same area
+                    offset += 12;
+                    if (offset > 36) break;
                 }
                 usedPositions.add(`${posKey}_${offset}`);
                 
-                const finalX = mapX + (offset % 30) - 15;
-                const finalY = mapY + Math.floor(offset / 30) * 15;
+                const finalX = mapX + (offset % 24) - 12;
+                const finalY = mapY + Math.floor(offset / 24) * 12;
                 
                 // Create aircraft marker
                 const aircraftMarker = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 aircraftMarker.setAttribute('id', `aircraft_${callsign}`);
                 
-                // Aircraft circle
+                // Aircraft circle with better visibility
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 circle.setAttribute('cx', finalX);
                 circle.setAttribute('cy', finalY);
-                circle.setAttribute('r', '5');
+                circle.setAttribute('r', '6');
                 circle.setAttribute('fill', '#ffff00');
-                circle.setAttribute('stroke', '#333');
-                circle.setAttribute('stroke-width', '1.5');
+                circle.setAttribute('stroke', '#000');
+                circle.setAttribute('stroke-width', '2');
                 
                 // Callsign text
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 text.setAttribute('x', finalX);
-                text.setAttribute('y', finalY - 10);
+                text.setAttribute('y', finalY - 12);
                 text.setAttribute('text-anchor', 'middle');
                 text.setAttribute('fill', '#ffff00');
-                text.setAttribute('font-size', '8');
+                text.setAttribute('font-size', '10');
                 text.setAttribute('font-weight', 'bold');
                 text.setAttribute('stroke', '#000');
-                text.setAttribute('stroke-width', '0.5');
+                text.setAttribute('stroke-width', '1');
                 text.textContent = callsign;
                 
                 // Aircraft data tooltip
                 const infoText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 infoText.setAttribute('x', finalX);
-                infoText.setAttribute('y', finalY + 15);
+                infoText.setAttribute('y', finalY + 18);
                 infoText.setAttribute('text-anchor', 'middle');
                 infoText.setAttribute('fill', '#ccc');
-                infoText.setAttribute('font-size', '6');
-                infoText.setAttribute('opacity', '0.8');
+                infoText.setAttribute('font-size', '8');
+                infoText.setAttribute('stroke', '#000');
+                infoText.setAttribute('stroke-width', '0.5');
                 infoText.textContent = `${aircraftData.altitude}ft • ${Math.round(aircraftData.groundSpeed)}kts`;
                 
                 aircraftMarker.appendChild(circle);
@@ -2124,30 +2136,34 @@
                 liveAircraftMarkers.appendChild(aircraftMarker);
             });
             
-            // Add status indicator
+            // Add status and debug info
             if (validAircraftCount > 0) {
                 const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 statusText.setAttribute('x', '20');
                 statusText.setAttribute('y', '30');
                 statusText.setAttribute('fill', '#50c878');
-                statusText.setAttribute('font-size', '14');
+                statusText.setAttribute('font-size', '16');
                 statusText.setAttribute('font-weight', 'bold');
                 statusText.setAttribute('stroke', '#000');
-                statusText.setAttribute('stroke-width', '0.5');
+                statusText.setAttribute('stroke-width', '1');
                 statusText.textContent = `${validAircraftCount} Active Aircraft`;
                 liveAircraftMarkers.appendChild(statusText);
                 
-                // Add coordinate info
-                const coordText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                coordText.setAttribute('x', '20');
-                coordText.setAttribute('y', '50');
-                coordText.setAttribute('fill', '#4a90e2');
-                coordText.setAttribute('font-size', '12');
-                coordText.setAttribute('font-weight', 'bold');
-                coordText.setAttribute('stroke', '#000');
-                coordText.setAttribute('stroke-width', '0.5');
-                coordText.textContent = 'Mouse wheel: zoom • Drag: pan';
-                liveAircraftMarkers.appendChild(coordText);
+                // Debug coordinate info
+                const debugText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                debugText.setAttribute('x', '20');
+                debugText.setAttribute('y', '55');
+                debugText.setAttribute('fill', '#4a90e2');
+                debugText.setAttribute('font-size', '12');
+                debugText.setAttribute('stroke', '#000');
+                debugText.setAttribute('stroke-width', '0.5');
+                debugText.textContent = 'Scale: 1px = 100 studs | Center: 482,460';
+                liveAircraftMarkers.appendChild(debugText);
+                
+                // Log first aircraft coordinates for debugging
+                if (debugInfo.length > 0) {
+                    console.log('🛩️ Aircraft coordinate conversion:', debugInfo[0]);
+                }
             }
             
             updateLiveMapTransform();
