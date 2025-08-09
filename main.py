@@ -287,6 +287,11 @@ def set_airport_filter():
 def get_airport_filter():
     return jsonify({"filter": current_airport_filter})
 
+@app.route('/api/aircraft_data')
+def get_aircraft_data():
+    """Return live aircraft data from WebSocket"""
+    return jsonify(aircraft_data)
+
 @app.route('/static/maps/<path:filename>')
 def serve_map_file(filename):
     """Serve map files from the static/maps directory"""

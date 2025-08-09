@@ -44,3 +44,29 @@ You can add files like:
 - `sectional_florida.png` - Florida sectional chart
 - `enroute_low_southeast.png` - Low altitude enroute chart
 - `overlay_airspace.svg` - Airspace boundaries overlay
+- **`game_map.png`** - Your PTFS game map for live flight tracking
+
+## Setting Up Live Flight Tracking
+
+### Step 1: Add Your Game Map
+1. Take a screenshot or export your PTFS game map
+2. Save it as `game_map.png` in this directory
+3. Make sure it shows all airports clearly
+
+### Step 2: Configure Airport Coordinates
+1. Open `map_config.js` in this directory
+2. Update the `airportMapCoordinates` section with the pixel coordinates of each airport on your map
+3. Use the coordinate helper by opening browser console and running `setupCoordinateHelper()`
+4. Click on airports in your map to get their coordinates
+
+### Step 3: Calibrate PTFS Coordinate Conversion
+1. In `map_config.js`, adjust the `ptfsBounds` values to match your game world boundaries
+2. Test with known aircraft positions to ensure accurate positioning
+
+### Example Workflow:
+1. Upload `game_map.png`
+2. Open flight details for any flight
+3. In browser console, run `setupCoordinateHelper()`
+4. Click on airports to get coordinates
+5. Update `map_config.js` with the coordinates
+6. Refresh and test live tracking
