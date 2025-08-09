@@ -2096,16 +2096,37 @@
             // Debug info to help calibrate coordinates
             const debugInfo = [];
 
-            // Fixed coordinate system - use known PTFS world bounds
-            const PTFS_WORLD_BOUNDS = {
-                minX: -50000, maxX: 50000,  // Approximate PTFS world X bounds
-                minY: -40000, maxY: 40000   // Approximate PTFS world Y bounds
-            };
+            // Calculate dynamic bounds from actual aircraft data
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            // First pass: find actual bounds of current aircraft
+            aircraftList.forEach(callsign => {
+                const aircraftData = liveAircraftData[callsign];
+                if (aircraftData && aircraftData.position) {
+                    minX = Math.min(minX, aircraftData.position.x);
+                    maxX = Math.max(maxX, aircraftData.position.x);
+                    minY = Math.min(minY, aircraftData.position.y);
+                    maxY = Math.max(maxY, aircraftData.position.y);
+                }
+            });
+
+            // Add padding to bounds (20% on each side)
+            const xRange = maxX - minX;
+            const yRange = maxY - minY;
+            const xPadding = Math.max(xRange * 0.2, 5000); // Minimum 5000 units padding
+            const yPadding = Math.max(yRange * 0.2, 5000);
+
+            const boundedMinX = minX - xPadding;
+            const boundedMaxX = maxX + xPadding;
+            const boundedMinY = minY - yPadding;
+            const boundedMaxY = maxY + yPadding;
+
+            console.log(`📊 Dynamic PTFS Ranges: X(${Math.round(boundedMinX)} to ${Math.round(boundedMaxX)}), Y(${Math.round(boundedMinY)} to ${Math.round(boundedMaxY)})`);
 
             const mapWidth = 1200;
             const mapHeight = 1200;
-            const mapCenterX = mapWidth / 2;
-            const mapCenterY = mapHeight / 2;
+            const mapPadding = 100; // Keep aircraft away from edges
 
             aircraftList.forEach(callsign => {
                 const aircraftData = liveAircraftData[callsign];
@@ -2116,40 +2137,37 @@
                 const ptfsX = aircraftData.position.x;
                 const ptfsY = aircraftData.position.y;
 
-                // Convert PTFS coordinates to map coordinates using fixed world bounds
-                // Scale to a reasonable map area (800x800 pixels centered in 1200x1200)
-                const mapScale = 400; // Reduced scale to bring aircraft closer to center
+                // Convert PTFS coordinates to map coordinates using dynamic bounds
+                const normalizedX = (ptfsX - boundedMinX) / (boundedMaxX - boundedMinX);
+                const normalizedY = (ptfsY - boundedMinY) / (boundedMaxY - boundedMinY);
                 
-                const normalizedX = (ptfsX - PTFS_WORLD_BOUNDS.minX) / (PTFS_WORLD_BOUNDS.maxX - PTFS_WORLD_BOUNDS.minX);
-                const normalizedY = (ptfsY - PTFS_WORLD_BOUNDS.minY) / (PTFS_WORLD_BOUNDS.maxY - PTFS_WORLD_BOUNDS.minY);
+                // Map to full map area with padding
+                let mapX = mapPadding + (normalizedX * (mapWidth - 2 * mapPadding));
+                let mapY = mapPadding + (normalizedY * (mapHeight - 2 * mapPadding));
                 
-                // Center the map and apply scale
-                let mapX = mapCenterX + ((normalizedX - 0.5) * mapScale);
-                let mapY = mapCenterY + ((normalizedY - 0.5) * mapScale);
-                
-                // Ensure aircraft stay within visible bounds
-                mapX = Math.max(50, Math.min(1150, mapX));
-                mapY = Math.max(50, Math.min(1150, mapY));
+                // Ensure aircraft stay within bounds
+                mapX = Math.max(mapPadding, Math.min(mapWidth - mapPadding, mapX));
+                mapY = Math.max(mapPadding, Math.min(mapHeight - mapPadding, mapY));
 
                 // Store debug info
                 debugInfo.push({
                     callsign,
                     ptfs: { x: ptfsX, y: ptfsY },
-                    normalized: { x: normalizedX.toFixed(3), y: normalizedY.toFixed(3) },
+                    direct_conversion: { x: ptfsX / 100, y: ptfsY / 100 },
                     svg: { x: Math.round(mapX), y: Math.round(mapY) }
                 });
 
                 // Handle position conflicts
-                const posKey = `${Math.round(mapX/20)}_${Math.round(mapY/20)}`;
+                const posKey = `${Math.round(mapX/30)}_${Math.round(mapY/30)}`;
                 let offset = 0;
                 while (usedPositions.has(`${posKey}_${offset}`)) {
-                    offset += 12;
-                    if (offset > 36) break;
+                    offset += 15;
+                    if (offset > 45) break;
                 }
                 usedPositions.add(`${posKey}_${offset}`);
 
-                const finalX = mapX + (offset % 24) - 12;
-                const finalY = mapY + Math.floor(offset / 24) * 12;
+                const finalX = mapX + (offset % 30) - 15;
+                const finalY = mapY + Math.floor(offset / 30) * 15;
 
                 // Create aircraft marker
                 const aircraftMarker = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -2159,7 +2177,7 @@
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 circle.setAttribute('cx', finalX);
                 circle.setAttribute('cy', finalY);
-                circle.setAttribute('r', '6');
+                circle.setAttribute('r', '8');
                 circle.setAttribute('fill', '#ffff00');
                 circle.setAttribute('stroke', '#000');
                 circle.setAttribute('stroke-width', '2');
@@ -2167,10 +2185,10 @@
                 // Callsign text
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 text.setAttribute('x', finalX);
-                text.setAttribute('y', finalY - 12);
+                text.setAttribute('y', finalY - 15);
                 text.setAttribute('text-anchor', 'middle');
                 text.setAttribute('fill', '#ffff00');
-                text.setAttribute('font-size', '10');
+                text.setAttribute('font-size', '12');
                 text.setAttribute('font-weight', 'bold');
                 text.setAttribute('stroke', '#000');
                 text.setAttribute('stroke-width', '1');
@@ -2179,10 +2197,10 @@
                 // Aircraft data tooltip
                 const infoText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 infoText.setAttribute('x', finalX);
-                infoText.setAttribute('y', finalY + 18);
+                infoText.setAttribute('y', finalY + 25);
                 infoText.setAttribute('text-anchor', 'middle');
                 infoText.setAttribute('fill', '#ccc');
-                infoText.setAttribute('font-size', '8');
+                infoText.setAttribute('font-size', '10');
                 infoText.setAttribute('stroke', '#000');
                 infoText.setAttribute('stroke-width', '0.5');
                 infoText.textContent = `${aircraftData.altitude}ft • ${Math.round(aircraftData.groundSpeed)}kts`;
@@ -2203,10 +2221,11 @@
                 statusText.setAttribute('font-weight', 'bold');
                 statusText.setAttribute('stroke', '#000');
                 statusText.setAttribute('stroke-width', '1');
-                statusText.textContent = `${validAircraftCount} Active Aircraft`;
+                statusText.textContent = `${validAircraftCount} Active Aircraft - Dynamic Scaling`;
                 liveAircraftMarkers.appendChild(statusText);
 
-                // Log first aircraft coordinates for debugging
+                // Log debug info
+                console.log('📍 All aircraft positions:', debugInfo);
                 if (debugInfo.length > 0) {
                     console.log('🛩️ Fixed coordinate conversion:', debugInfo[0]);
                     console.log('📍 Sample aircraft positions:', debugInfo.slice(0, 3));
