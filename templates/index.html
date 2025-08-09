@@ -2081,12 +2081,12 @@
                 const normalizedY = (ptfsY - ptfsBounds.minY) / (ptfsBounds.maxY - ptfsBounds.minY);
 
                 // Convert to SVG coordinates (flip Y since PTFS -y is North, SVG +y is down)
-                let mapX = normalizedX * 964;           // Scale to map width
-                let mapY = (1 - normalizedY) * 921;     // Scale to map height and flip Y axis
+                let mapX = normalizedX * 1200;          // Scale to map width (1200x1200)
+                let mapY = (1 - normalizedY) * 1200;    // Scale to map height (1200x1200) and flip Y axis
 
                 // Clamp to map bounds with padding
-                mapX = Math.max(30, Math.min(934, mapX));
-                mapY = Math.max(30, Math.min(891, mapY));
+                mapX = Math.max(30, Math.min(1170, mapX));
+                mapY = Math.max(30, Math.min(1170, mapY));
 
                 // Store debug info
                 debugInfo.push({
