@@ -48,25 +48,36 @@ You can add files like:
 
 ## Setting Up Live Flight Tracking
 
-### Step 1: Add Your Game Map
-1. Take a screenshot or export your PTFS game map
-2. Save it as `game_map.png` in this directory
-3. Make sure it shows all airports clearly
+### Step 1: Add Your Game Map (SVG Format)
+1. Export your PTFS game map as SVG format
+2. Save it as `game_map.svg` in this directory
+3. Ensure the SVG uses the coordinate system where:
+   - 0,0 in-game maps to 0,0 in the SVG
+   - 1 SVG pixel = 100 game studs
+   - Content may extend outside the viewport (this is expected)
 
-### Step 2: Configure Airport Coordinates
-1. Open `map_config.js` in this directory
-2. Update the `airportMapCoordinates` section with the pixel coordinates of each airport on your map
-3. Use the coordinate helper by opening browser console and running `setupCoordinateHelper()`
-4. Click on airports in your map to get their coordinates
+### Step 2: Coordinate System (Simplified)
+The coordinate system is now simplified:
+- **No manual coordinate configuration needed**
+- Airport coordinates are automatically calculated from PTFS coordinates
+- Formula: SVG_coordinate = PTFS_coordinate / 100
+- All airports are already configured in `map_config.js`
 
-### Step 3: Calibrate PTFS Coordinate Conversion
-1. In `map_config.js`, adjust the `ptfsBounds` values to match your game world boundaries
-2. Test with known aircraft positions to ensure accurate positioning
+### Step 3: SVG Requirements
+Your SVG map should follow these specifications:
+- 0,0 in-game = 0,0 in SVG coordinate space
+- Scale: 1px = 100 studs
+- The map content may extend beyond the viewBox
+- This simplifies layer additions as no offset/scaling is needed
 
 ### Example Workflow:
-1. Upload `game_map.png`
-2. Open flight details for any flight
-3. In browser console, run `setupCoordinateHelper()`
-4. Click on airports to get coordinates
-5. Update `map_config.js` with the coordinates
-6. Refresh and test live tracking
+1. Export/create `game_map.svg` with the correct coordinate system
+2. Upload to this directory
+3. The system will automatically position airports correctly
+4. Live aircraft tracking will work immediately with accurate positioning
+
+### Technical Notes:
+- Airport coordinates are pre-calculated from known PTFS coordinates
+- Live aircraft positions are converted using: SVG_pos = PTFS_pos / 100
+- Y-axis is flipped for proper SVG display
+- All overlays and markers will align automatically

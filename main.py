@@ -1,4 +1,3 @@
-
 import json
 import random
 import asyncio
@@ -43,22 +42,22 @@ def calculate_distance_to_airport(aircraft_pos, airport_code):
     """Calculate distance from aircraft to airport in feet using real PTFS coordinates"""
     if airport_code not in AIRPORT_COORDINATES:
         return None
-    
+
     airport_pos = AIRPORT_COORDINATES[airport_code]
-    
+
     # Use real PTFS coordinates from WebSocket (position.x and position.y)
     # Note: In PTFS, -y is North, -x is West
     aircraft_x = aircraft_pos.get('x', 0)
     aircraft_y = aircraft_pos.get('y', 0)
-    
+
     # Calculate distance in studs
     dx = aircraft_x - airport_pos['x']
     dy = aircraft_y - airport_pos['z']  # Using z for airport y-coordinate
     distance_studs = math.sqrt(dx*dx + dy*dy)
-    
+
     # Convert studs to feet (1 stud = 1.8372 ft according to the API docs)
     distance_feet = distance_studs * 1.8372
-    
+
     return int(distance_feet)
 
 def generate_squawk():
@@ -102,7 +101,7 @@ async def websocket_listener():
                 async for message in ws:
                     try:
                         packet = json.loads(message)
-                        
+
                         # Handle flight plans
                         if packet.get("t") in ["FLIGHT_PLAN", "EVENT_FLIGHT_PLAN"]:
                             flightplan = packet["d"]
@@ -159,22 +158,22 @@ def index():
 @app.route('/api/flights')
 def get_flights():
     flights_to_return = []
-    
+
     # Add distance calculation for all flights with position data
     for flight in flights_history[-50:]:
         flight_copy = flight.copy()
-        
+
         # Add distance to departing airport for all flights with position data
         if flight["callsign"] in aircraft_data and "position" in aircraft_data[flight["callsign"]]:
             aircraft_pos = aircraft_data[flight["callsign"]]["position"]
             departing_distance = calculate_distance_to_airport(aircraft_pos, flight["departing"])
             arriving_distance = calculate_distance_to_airport(aircraft_pos, flight["arriving"])
-            
+
             if departing_distance is not None:
                 flight_copy["distance_to_departing"] = departing_distance
             if arriving_distance is not None:
                 flight_copy["distance_to_arriving"] = arriving_distance
-        
+
         # Handle filtering logic - only show clearances for departing flights
         if current_airport_filter:
             if flight["arriving"] == current_airport_filter:
@@ -186,9 +185,9 @@ def get_flights():
                 continue  # Skip flights not related to filtered airport
         else:
             flight_copy["is_arriving_to_filter"] = False
-            
+
         flights_to_return.append(flight_copy)
-    
+
     return jsonify(flights_to_return)
 
 @app.route('/api/status')
@@ -205,7 +204,7 @@ def generate_clearance():
         data = request.json
         flightplan = data.get('flightplan', {})
         runway = data.get('runway', '___')
-        
+
         clearance = make_clearance(flightplan, runway)
         timestamp = datetime.now().strftime("%H:%M:%S")
         squawk = generate_squawk()
@@ -233,7 +232,7 @@ def update_runway():
     try:
         data = request.json
         runway = data.get('runway', '___')
-        
+
         # Update all flights with new runway clearance
         for flight in flights_history:
             original_flightplan = {
@@ -242,7 +241,7 @@ def update_runway():
                 'flightlevel': flight['flightlevel']
             }
             flight['clearance'] = make_clearance(original_flightplan, runway)
-            
+
         return jsonify({"success": True, "message": f"Updated runway to {runway}"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
@@ -297,7 +296,7 @@ def serve_map_file(filename):
     """Serve map files from the static/maps directory"""
     import os
     from flask import send_from_directory
-    
+
     maps_dir = os.path.join(os.path.dirname(__file__), 'static', 'maps')
     if os.path.exists(os.path.join(maps_dir, filename)):
         return send_from_directory(maps_dir, filename)

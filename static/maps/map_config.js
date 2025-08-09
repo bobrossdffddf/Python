@@ -1,51 +1,44 @@
 
 // Map Configuration for PTFS Game Map
-// Update these coordinates based on your actual game map
+// SVG format with simplified coordinate system: 0,0 in-game = 0,0 in SVG, 1px = 100 studs
 
 const MAP_CONFIG = {
-    // Path to your game map image (add your map file here)
-    gameMapPath: '/static/maps/game_map.png',
+    // Path to your game map SVG file
+    gameMapPath: '/static/maps/game_map.svg',
     
-    // Map dimensions (update based on your image size)
+    // Map dimensions (SVG viewBox, content may extend beyond)
     mapWidth: 800,
     mapHeight: 600,
     
-    // PTFS world coordinate bounds (adjust based on your game world)
-    ptfsBounds: {
-        minX: -3500,
-        maxX: 0,
-        minZ: 0,
-        maxZ: 4500
-    },
+    // Simplified coordinate system: 1px = 100 studs
+    // No offset needed, direct coordinate mapping
+    coordinateScale: 100, // 1 SVG pixel = 100 game studs
     
-    // Airport positions on your game map image (X,Y pixel coordinates)
-    // TO UPDATE THESE:
-    // 1. Open your game map image in an image editor
-    // 2. Note the pixel coordinates of each airport
-    // 3. Update the coordinates below
+    // Airport positions using direct PTFS coordinates converted to SVG pixels
+    // Formula: SVG_coordinate = PTFS_coordinate / 100
     airportMapCoordinates: {
-        'IBAR': { x: 300, y: 200 },
-        'IHEN': { x: 450, y: 180 },
-        'ILAR': { x: 250, y: 150 },
-        'IIAB': { x: 500, y: 220 },
-        'IPAP': { x: 150, y: 100 },
-        'IGRV': { x: 400, y: 250 },
-        'IJAF': { x: 100, y: 80 },
-        'IZOL': { x: 50, y: 120 },
-        'ISCM': { x: 180, y: 200 },
-        'IDCS': { x: 550, y: 150 },
-        'ITKO': { x: 280, y: 280 },
-        'ILKL': { x: 320, y: 70 },
-        'IPPH': { x: 20, y: 200 },
-        'IGAR': { x: 150, y: 50 },
-        'IBLT': { x: 520, y: 190 },
-        'IRFD': { x: 80, y: 130 },
-        'IMLR': { x: 450, y: 270 },
-        'ITRC': { x: 50, y: 30 },
-        'IBTH': { x: 200, y: 170 },
-        'IUFO': { x: 120, y: 110 },
-        'ISAU': { x: 480, y: 130 },
-        'ISKP': { x: 30, y: 40 }
+        'IBAR': { x: -12.5, y: 21 },    // PTFS: -1250, 2100
+        'IHEN': { x: -8.9, y: 18.9 },   // PTFS: -890, 1890
+        'ILAR': { x: -15.4, y: 22.5 },  // PTFS: -1540, 2250
+        'IIAB': { x: -7.2, y: 17.5 },   // PTFS: -720, 1750
+        'IPAP': { x: -21, y: 28.9 },    // PTFS: -2100, 2890
+        'IGRV': { x: -9.8, y: 15.6 },   // PTFS: -980, 1560
+        'IJAF': { x: -24.5, y: 32.1 },  // PTFS: -2450, 3210
+        'IZOL': { x: -28.9, y: 27.8 },  // PTFS: -2890, 2780
+        'ISCM': { x: -23.4, y: 21 },    // PTFS: -2340, 2100
+        'IDCS': { x: -4.5, y: 26.9 },   // PTFS: -450, 2690
+        'ITKO': { x: -16.7, y: 13.4 },  // PTFS: -1670, 1340
+        'ILKL': { x: -12.34, y: 34.5 }, // PTFS: -1234, 3450
+        'IPPH': { x: -32, y: 21 },      // PTFS: -3200, 2100
+        'IGAR': { x: -21, y: 38.9 },    // PTFS: -2100, 3890
+        'IBLT': { x: -5.6, y: 23.4 },   // PTFS: -560, 2340
+        'IRFD': { x: -27.8, y: 31 },    // PTFS: -2780, 3100
+        'IMLR': { x: -8.9, y: 14.5 },   // PTFS: -890, 1450
+        'ITRC': { x: -28.9, y: 41 },    // PTFS: -2890, 4100
+        'IBTH': { x: -18.9, y: 24.5 },  // PTFS: -1890, 2450
+        'IUFO': { x: -25.6, y: 32 },    // PTFS: -2560, 3200
+        'ISAU': { x: -6.7, y: 31 },     // PTFS: -670, 3100
+        'ISKP': { x: -31, y: 40 }       // PTFS: -3100, 4000
     }
 };
 
