@@ -1273,14 +1273,15 @@
                 return;
             }
 
-            // Use proper viewBox from config
-            const viewBox = window.MAP_CONFIG ? window.MAP_CONFIG.viewBox : "-400 -500 1200 1000";
+            // Use proper viewBox from config (should be "0 0 964 921" for your map)
+            const viewBox = window.MAP_CONFIG ? window.MAP_CONFIG.viewBox : "0 0 964 921";
 
             mapDiv.innerHTML = `
                 <div style="height: 100%; display: flex; flex-direction: column;">
                     <div style="text-align: center; margin-bottom: 10px;">
                         <h4 style="color: #4a90e2; margin: 0;">${departure} ➜ ${arrival}</h4>
                         <div style="font-size: 12px; color: #ccc;">Live Flight Tracking • Mouse wheel to zoom • Drag to pan</div>
+                        <div style="font-size: 10px; color: #888;">⚠️ Airport coordinates need to be defined - use coordinate helper</div>
                     </div>
                     <div style="flex: 1; position: relative; overflow: hidden; border-radius: 8px; background: #1a1a3e;">
                         <div style="width: 100%; height: 100%; position: relative;">
@@ -1311,14 +1312,13 @@
                         </div>
                     </div>
                     <div style="text-align: center; margin-top: 10px; font-size: 11px; color: #ccc;">
-                        <div id="trackingStatus">Click flight to start live tracking</div>
+                        <div id="trackingStatus">📍 Use coordinate helper to define airport positions first</div>
                     </div>
                 </div>
             `;
 
             // Start tracking this specific flight
             trackingCallsign = currentFlightData.callsign;
-            document.getElementById('trackingStatus').textContent = `Tracking: ${trackingCallsign}`;
             updateFlightPosition();
         }
 
@@ -1331,11 +1331,15 @@
             
             if (!aircraftMarker || !aircraftCallsignText) return;
 
-            // Convert PTFS coordinates to SVG coordinates (1px = 100 studs)
-            // Using the simplified coordinate system from map config
-            const scale = window.MAP_CONFIG ? window.MAP_CONFIG.coordinateScale : 100;
-            const svgX = aircraftData.position.x / scale;
-            const svgY = -aircraftData.position.y / scale; // Flip Y axis for SVG
+            // For now, we'll need to calibrate this once airports are properly positioned
+            // This is a placeholder calculation that needs to be adjusted based on your map
+            const mapWidth = 964;
+            const mapHeight = 921;
+            
+            // Temporary conversion - will need adjustment based on actual map coordinate system
+            // You'll need to calibrate this by comparing known PTFS positions with map positions
+            const svgX = (aircraftData.position.x + 3500) * (mapWidth / 7000); // Rough estimate
+            const svgY = (4500 - aircraftData.position.y) * (mapHeight / 4500); // Rough estimate
             
             aircraftMarker.style.display = 'block';
             aircraftMarker.setAttribute('transform', `translate(${svgX}, ${svgY})`);
@@ -1348,7 +1352,8 @@
                     🛩️ Live: ${trackingCallsign} | Alt: ${aircraftData.altitude}ft | 
                     Speed: ${Math.round(aircraftData.groundSpeed)}kts | 
                     Heading: ${aircraftData.heading}° | 
-                    Pos: ${svgX.toFixed(1)}, ${svgY.toFixed(1)}
+                    PTFS: ${aircraftData.position.x}, ${aircraftData.position.y} | 
+                    Map: ${svgX.toFixed(1)}, ${svgY.toFixed(1)}
                 `;
             }
         }

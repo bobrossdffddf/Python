@@ -6,50 +6,54 @@ const MAP_CONFIG = {
     // Path to your game map SVG file
     gameMapPath: '/static/maps/game_map.svg',
     
-    // Map dimensions - expanded to show full game world
-    mapWidth: 1200,
-    mapHeight: 1000,
+    // Actual SVG map dimensions from your file
+    mapWidth: 964,
+    mapHeight: 921,
     
-    // SVG viewBox to show the entire game area (adjust these based on your map bounds)
-    viewBox: "-400 -500 1200 1000", // x, y, width, height
+    // SVG viewBox matches your map's actual viewBox
+    viewBox: "0 0 964 921", // x, y, width, height
     
-    // Simplified coordinate system: 1px = 100 studs
-    // No offset needed, direct coordinate mapping
-    coordinateScale: 100, // 1 SVG pixel = 100 game studs
+    // Coordinate system: Direct pixel mapping to your SVG
+    coordinateScale: 1, // 1 SVG pixel = 1 pixel on your map
     
-    // Airport positions using direct PTFS coordinates converted to SVG pixels
-    // Formula: SVG_coordinate = PTFS_coordinate / 100
+    // Airport positions - YOU NEED TO DEFINE THESE BY CLICKING ON YOUR MAP
+    // Use the coordinate helper tool to find the correct X,Y positions for each airport
+    // Right-click on the map where each airport is located to get coordinates
     airportMapCoordinates: {
-        'IBAR': { x: -12.5, y: 21 },    // PTFS: -1250, 2100
-        'IHEN': { x: -8.9, y: 18.9 },   // PTFS: -890, 1890
-        'ILAR': { x: -15.4, y: 22.5 },  // PTFS: -1540, 2250
-        'IIAB': { x: -7.2, y: 17.5 },   // PTFS: -720, 1750
-        'IPAP': { x: -21, y: 28.9 },    // PTFS: -2100, 2890
-        'IGRV': { x: -9.8, y: 15.6 },   // PTFS: -980, 1560
-        'IJAF': { x: -24.5, y: 32.1 },  // PTFS: -2450, 3210
-        'IZOL': { x: -28.9, y: 27.8 },  // PTFS: -2890, 2780
-        'ISCM': { x: -23.4, y: 21 },    // PTFS: -2340, 2100
-        'IDCS': { x: -4.5, y: 26.9 },   // PTFS: -450, 2690
-        'ITKO': { x: -16.7, y: 13.4 },  // PTFS: -1670, 1340
-        'ILKL': { x: -12.34, y: 34.5 }, // PTFS: -1234, 3450
-        'IPPH': { x: -32, y: 21 },      // PTFS: -3200, 2100
-        'IGAR': { x: -21, y: 38.9 },    // PTFS: -2100, 3890
-        'IBLT': { x: -5.6, y: 23.4 },   // PTFS: -560, 2340
-        'IRFD': { x: 410.15, y: 520.35 },    // PTFS: -2780, 3100
-        'IMLR': { x: -8.9, y: 14.5 },   // PTFS: -890, 1450
-        'ITRC': { x: -28.9, y: 41 },    // PTFS: -2890, 4100
-        'IBTH': { x: -18.9, y: 24.5 },  // PTFS: -1890, 2450
-        'IUFO': { x: -25.6, y: 32 },    // PTFS: -2560, 3200
-        'ISAU': { x: -6.7, y: 31 },     // PTFS: -670, 3100
-        'ISKP': { x: -31, y: 40 }       // PTFS: -3100, 4000
+        // EXAMPLE COORDINATES - REPLACE THESE WITH ACTUAL POSITIONS FROM YOUR MAP
+        // Use the coordinate helper by clicking the 📍 button in fullscreen mode
+        'IBAR': { x: 400, y: 300 },    // Replace with actual position
+        'IHEN': { x: 450, y: 280 },    // Replace with actual position
+        'ILAR': { x: 350, y: 250 },    // Replace with actual position
+        'IIAB': { x: 500, y: 320 },    // Replace with actual position
+        'IPAP': { x: 200, y: 200 },    // Replace with actual position
+        'IGRV': { x: 420, y: 350 },    // Replace with actual position
+        'IJAF': { x: 150, y: 150 },    // Replace with actual position
+        'IZOL': { x: 100, y: 180 },    // Replace with actual position
+        'ISCM': { x: 250, y: 300 },    // Replace with actual position
+        'IDCS': { x: 550, y: 250 },    // Replace with actual position
+        'ITKO': { x: 380, y: 380 },    // Replace with actual position
+        'ILKL': { x: 320, y: 120 },    // Replace with actual position
+        'IPPH': { x: 50, y: 300 },     // Replace with actual position
+        'IGAR': { x: 200, y: 100 },    // Replace with actual position
+        'IBLT': { x: 520, y: 290 },    // Replace with actual position
+        'IRFD': { x: 180, y: 200 },    // Replace with actual position
+        'IMLR': { x: 450, y: 370 },    // Replace with actual position
+        'ITRC': { x: 100, y: 80 },     // Replace with actual position
+        'IBTH': { x: 300, y: 270 },    // Replace with actual position
+        'IUFO': { x: 220, y: 180 },    // Replace with actual position
+        'ISAU': { x: 480, y: 220 },    // Replace with actual position
+        'ISKP': { x: 80, y: 100 }      // Replace with actual position
     }
 };
 
 // Enhanced coordinate helper with airport definition
 function setupCoordinateHelper() {
     console.log("🗺️ Map Coordinate Helper Active!");
-    console.log("Right-click on map to add airport coordinates");
-    console.log("Left-click to get coordinates");
+    console.log("📋 INSTRUCTIONS:");
+    console.log("1. Left-click on map to see coordinates");
+    console.log("2. Right-click on airport locations to define them");
+    console.log("3. Use exportAirportCoordinates() to get the code to copy");
     
     window.tempAirports = window.tempAirports || [];
     
@@ -63,15 +67,16 @@ function setupCoordinateHelper() {
             const x = Math.round(event.clientX - rect.left);
             const y = Math.round(event.clientY - rect.top);
             
-            // Convert to SVG coordinates (accounting for scaling)
-            const svgX = (x / rect.width) * MAP_CONFIG.mapWidth - 400;
-            const svgY = (y / rect.height) * MAP_CONFIG.mapHeight - 500;
+            // Convert to actual SVG coordinates (1:1 mapping for 964x921 map)
+            const svgX = Math.round((x / rect.width) * MAP_CONFIG.mapWidth);
+            const svgY = Math.round((y / rect.height) * MAP_CONFIG.mapHeight);
             
-            console.log(`📍 Clicked at SVG coords: { x: ${svgX.toFixed(1)}, y: ${svgY.toFixed(1)} }`);
+            console.log(`📍 Map Position: { x: ${svgX}, y: ${svgY} }`);
             console.log(`   Screen coords: { x: ${x}, y: ${y} }`);
+            console.log(`   Copy this format: { x: ${svgX}, y: ${svgY} }`);
             
             // Create temporary marker
-            createTempMarker(rect.left + x, rect.top + y, `${svgX.toFixed(1)}, ${svgY.toFixed(1)}`);
+            createTempMarker(rect.left + x, rect.top + y, `${svgX}, ${svgY}`);
         });
         
         // Right click - add airport
@@ -82,14 +87,15 @@ function setupCoordinateHelper() {
             const x = Math.round(event.clientX - rect.left);
             const y = Math.round(event.clientY - rect.top);
             
-            // Convert to SVG coordinates
-            const svgX = (x / rect.width) * MAP_CONFIG.mapWidth - 400;
-            const svgY = (y / rect.height) * MAP_CONFIG.mapHeight - 500;
+            // Convert to actual SVG coordinates (1:1 mapping)
+            const svgX = Math.round((x / rect.width) * MAP_CONFIG.mapWidth);
+            const svgY = Math.round((y / rect.height) * MAP_CONFIG.mapHeight);
             
             const airportCode = prompt("Enter airport code (e.g., IBAR):");
             if (airportCode) {
                 addAirportCoordinate(airportCode.toUpperCase(), svgX, svgY);
                 createTempMarker(rect.left + x, rect.top + y, airportCode, true);
+                console.log(`✅ Added ${airportCode.toUpperCase()} at position { x: ${svgX}, y: ${svgY} }`);
             }
         });
     }
@@ -112,20 +118,23 @@ function setupCoordinateHelper() {
 }
 
 function addAirportCoordinate(code, x, y) {
-    window.tempAirports.push({ code, x: x.toFixed(1), y: y.toFixed(1) });
-    console.log(`✈️ Added ${code}: { x: ${x.toFixed(1)}, y: ${y.toFixed(1)} }`);
-    console.log("📋 Copy this to your map_config.js:");
-    console.log(`'${code}': { x: ${x.toFixed(1)}, y: ${y.toFixed(1)} },`);
+    window.tempAirports.push({ code, x: Math.round(x), y: Math.round(y) });
+    console.log(`✈️ Added ${code}: { x: ${Math.round(x)}, y: ${Math.round(y)} }`);
+    console.log("📋 Copy this line to map_config.js:");
+    console.log(`        '${code}': { x: ${Math.round(x)}, y: ${Math.round(y)} },`);
 }
 
 function exportAirportCoordinates() {
     if (window.tempAirports && window.tempAirports.length > 0) {
-        console.log("📋 All airport coordinates:");
+        console.log("📋 COPY ALL AIRPORT COORDINATES TO MAP_CONFIG.JS:");
+        console.log("========================================");
         window.tempAirports.forEach(airport => {
-            console.log(`'${airport.code}': { x: ${airport.x}, y: ${airport.y} },`);
+            console.log(`        '${airport.code}': { x: ${airport.x}, y: ${airport.y} },`);
         });
+        console.log("========================================");
+        console.log(`🎯 Total airports defined: ${window.tempAirports.length}`);
     } else {
-        console.log("No airports defined yet. Right-click on map to add airports.");
+        console.log("❌ No airports defined yet. Right-click on map to add airports.");
     }
 }
 

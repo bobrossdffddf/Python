@@ -48,36 +48,42 @@ You can add files like:
 
 ## Setting Up Live Flight Tracking
 
-### Step 1: Add Your Game Map (SVG Format)
-1. Export your PTFS game map as SVG format
-2. Save it as `game_map.svg` in this directory
-3. Ensure the SVG uses the coordinate system where:
-   - 0,0 in-game maps to 0,0 in the SVG
-   - 1 SVG pixel = 100 game studs
-   - Content may extend outside the viewport (this is expected)
+### COORDINATE DEFINITION GUIDE for 964x921 Map
 
-### Step 2: Coordinate System (Simplified)
-The coordinate system is now simplified:
-- **No manual coordinate configuration needed**
-- Airport coordinates are automatically calculated from PTFS coordinates
-- Formula: SVG_coordinate = PTFS_coordinate / 100
-- All airports are already configured in `map_config.js`
+Your map is loaded and ready! Now you need to define where each airport is located on your map.
 
-### Step 3: SVG Requirements
-Your SVG map should follow these specifications:
-- 0,0 in-game = 0,0 in SVG coordinate space
-- Scale: 1px = 100 studs
-- The map content may extend beyond the viewBox
-- This simplifies layer additions as no offset/scaling is needed
+### Step 1: Use the Coordinate Helper
+1. Open any flight in the system
+2. Click the "⛶ Expand" button on the Route Map
+3. Click the "📍" button in the fullscreen view to activate coordinate helper
+4. Left-click anywhere on the map to see coordinates
+5. Right-click on each airport location to define it
+
+### Step 2: Define Airport Positions
+For each airport (IBAR, IHEN, ILAR, etc.):
+1. Find the airport on your map visually
+2. Right-click on that exact location
+3. Enter the airport code (e.g., "IBAR")
+4. Repeat for all airports
+
+### Step 3: Export and Update Configuration
+1. After defining all airports, run: `exportAirportCoordinates()`
+2. Copy the output from the console
+3. Replace the airport coordinates in `map_config.js`
+
+### Current Map Specifications:
+- **Dimensions**: 964 × 921 pixels
+- **ViewBox**: "0 0 964 921"
+- **Coordinate System**: Direct pixel mapping (1:1)
+- **Origin**: Top-left corner (0,0)
 
 ### Example Workflow:
-1. Export/create `game_map.svg` with the correct coordinate system
-2. Upload to this directory
-3. The system will automatically position airports correctly
-4. Live aircraft tracking will work immediately with accurate positioning
+1. ✅ Map loaded (game_map.svg - 964x921)
+2. 🔄 Define airport coordinates using helper tool
+3. 📋 Copy coordinates to map_config.js
+4. 🎯 Live aircraft tracking will work accurately
 
-### Technical Notes:
-- Airport coordinates are pre-calculated from known PTFS coordinates
-- Live aircraft positions are converted using: SVG_pos = PTFS_pos / 100
-- Y-axis is flipped for proper SVG display
-- All overlays and markers will align automatically
+### Airport List to Define:
+IBAR, IHEN, ILAR, IIAB, IPAP, IGRV, IJAF, IZOL, ISCM, IDCS, ITKO, ILKL, IPPH, IGAR, IBLT, IRFD, IMLR, ITRC, IBTH, IUFO, ISAU, ISKP
+
+**Status**: Ready for coordinate definition!
