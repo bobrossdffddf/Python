@@ -1387,8 +1387,8 @@
                 <div style="height: 100%; display: flex; flex-direction: column;">
                     <div style="text-align: center; margin-bottom: 10px;">
                         <h4 style="color: #4a90e2; margin: 0;">${departure} ➜ ${arrival}</h4>
-                        <div style="font-size: 12px; color: #ccc;">Live Flight Tracking • Mouse wheel to zoom • Drag to pan</div>
-                        <div style="font-size: 10px; color: #888;">⚠️ Airport coordinates need to be defined - use coordinate helper</div>
+                        <div style="font-size: 12px; color: #50c878;">🛩️ Live Flight Tracking: ${currentFlightData.callsign}</div>
+                        <div style="font-size: 10px; color: #ccc;">Real-time position updates every 5 seconds</div>
                     </div>
                     <div style="flex: 1; position: relative; overflow: hidden; border-radius: 8px; background: #1a1a3e;">
                         <div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
@@ -1410,16 +1410,21 @@
                                 <text x="${arrCoords.x}" y="${arrCoords.y - 15}" text-anchor="middle" fill="#f44336" 
                                       font-size="12" font-weight="bold">${arrival}</text>
 
-                                <!-- Live aircraft position (will be updated via JavaScript) -->
+                                <!-- Live aircraft position -->
                                 <g id="aircraftMarker" style="display: none;">
-                                    <circle cx="0" cy="0" r="6" fill="#ffff00" stroke="white" stroke-width="2"/>
-                                    <text x="0" y="-12" text-anchor="middle" fill="#ffff00" font-size="10" font-weight="bold" id="aircraftCallsign"></text>
+                                    <circle cx="0" cy="0" r="8" fill="#ffff00" stroke="white" stroke-width="3">
+                                        <animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite"/>
+                                    </circle>
+                                    <text x="0" y="-15" text-anchor="middle" fill="#ffff00" font-size="12" font-weight="bold" 
+                                          id="aircraftCallsign" stroke="black" stroke-width="1"></text>
+                                    <text x="0" y="25" text-anchor="middle" fill="#ffff00" font-size="10" 
+                                          id="aircraftInfo" stroke="black" stroke-width="0.5"></text>
                                 </g>
                             </svg>
                         </div>
                     </div>
                     <div style="text-align: center; margin-top: 10px; font-size: 11px; color: #ccc;">
-                        <div id="trackingStatus">📍 Use coordinate helper to define airport positions first</div>
+                        <div id="trackingStatus">🔄 Initializing live tracking for ${currentFlightData.callsign}...</div>
                     </div>
                 </div>
             `;
@@ -1441,41 +1446,50 @@
             const currentAircraftData = liveAircraftData[trackingCallsign];
             if (!currentAircraftData || !currentAircraftData.position) return;
 
-            // Use the same coordinate conversion as live map for consistency
+            // Use same coordinate conversion as live map
+            const PTFS_WORLD_BOUNDS = {
+                minX: -50000, maxX: 50000,
+                minY: -40000, maxY: 40000
+            };
+
             const mapWidth = 1200;
             const mapHeight = 1200;
-            const mapCenterX = 600;
-            const mapCenterY = 600;
+            const mapCenterX = mapWidth / 2;
+            const mapCenterY = mapHeight / 2;
+            const mapScale = 400; // Same scale as live map
             
             const ptfsX = currentAircraftData.position.x;
             const ptfsY = currentAircraftData.position.y;
             
-            // Same scaling as live map - aircraft range roughly -30000 to +35000
-            const ptfsRange = 65000;
-            const mapRange = 1200;
-            const scaleFactor = mapRange / ptfsRange;
+            // Convert PTFS coordinates to map coordinates using same system as live map
+            const normalizedX = (ptfsX - PTFS_WORLD_BOUNDS.minX) / (PTFS_WORLD_BOUNDS.maxX - PTFS_WORLD_BOUNDS.minX);
+            const normalizedY = (ptfsY - PTFS_WORLD_BOUNDS.minY) / (PTFS_WORLD_BOUNDS.maxY - PTFS_WORLD_BOUNDS.minY);
             
-            // Convert PTFS coordinates to map coordinates
-            let mapX = mapCenterX + (ptfsX * scaleFactor);
-            let mapY = mapCenterY + (ptfsY * scaleFactor);
+            let mapX = mapCenterX + ((normalizedX - 0.5) * mapScale);
+            let mapY = mapCenterY + ((normalizedY - 0.5) * mapScale);
             
             // Ensure within bounds
-            mapX = Math.max(0, Math.min(1200, mapX));
-            mapY = Math.max(0, Math.min(1200, mapY));
+            mapX = Math.max(50, Math.min(1150, mapX));
+            mapY = Math.max(50, Math.min(1150, mapY));
 
             aircraftMarker.style.display = 'block';
             aircraftMarker.setAttribute('transform', `translate(${mapX}, ${mapY})`);
             aircraftCallsignText.textContent = trackingCallsign;
 
+            // Update aircraft info below the marker
+            const aircraftInfo = document.getElementById('aircraftInfo');
+            if (aircraftInfo) {
+                aircraftInfo.textContent = `${currentAircraftData.altitude || 0}ft • ${Math.round(currentAircraftData.groundSpeed || 0)}kts`;
+            }
+
             // Update tracking status
             const trackingStatus = document.getElementById('trackingStatus');
             if (trackingStatus) {
                 trackingStatus.innerHTML = `
-                    🛩️ Live: ${trackingCallsign} | Alt: ${currentAircraftData.altitude}ft | 
+                    ✅ Live: ${trackingCallsign} | Alt: ${currentAircraftData.altitude || 0}ft | 
                     Speed: ${Math.round(currentAircraftData.groundSpeed || 0)}kts | 
                     Heading: ${currentAircraftData.heading || 0}° | 
-                    PTFS: ${ptfsX}, ${ptfsY} | 
-                    Map: ${mapX.toFixed(1)}, ${mapY.toFixed(1)}
+                    Last Update: ${new Date().toLocaleTimeString()}
                 `;
             }
         }
@@ -2082,21 +2096,16 @@
             // Debug info to help calibrate coordinates
             const debugInfo = [];
 
-            // First pass: find actual coordinate ranges from live aircraft
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            aircraftList.forEach(callsign => {
-                const aircraftData = liveAircraftData[callsign];
-                if (aircraftData && aircraftData.position) {
-                    minX = Math.min(minX, aircraftData.position.x);
-                    maxX = Math.max(maxX, aircraftData.position.x);
-                    minY = Math.min(minY, aircraftData.position.y);
-                    maxY = Math.max(maxY, aircraftData.position.y);
-                }
-            });
+            // Fixed coordinate system - use known PTFS world bounds
+            const PTFS_WORLD_BOUNDS = {
+                minX: -50000, maxX: 50000,  // Approximate PTFS world X bounds
+                minY: -40000, maxY: 40000   // Approximate PTFS world Y bounds
+            };
 
-            // Calculate dynamic ranges from actual aircraft positions
-            const ptfsXRange = Math.max(maxX - minX, 1000); // Minimum range to avoid division by zero
-            const ptfsYRange = Math.max(maxY - minY, 1000);
+            const mapWidth = 1200;
+            const mapHeight = 1200;
+            const mapCenterX = mapWidth / 2;
+            const mapCenterY = mapHeight / 2;
 
             aircraftList.forEach(callsign => {
                 const aircraftData = liveAircraftData[callsign];
@@ -2104,31 +2113,29 @@
 
                 validAircraftCount++;
 
-                const ptfsX = aircraftData.position.x; // PTFS X position
-                const ptfsY = aircraftData.position.y; // PTFS Y position
+                const ptfsX = aircraftData.position.x;
+                const ptfsY = aircraftData.position.y;
 
-                // Use dynamic coordinate system based on actual aircraft ranges
-                const mapWidth = 1200;
-                const mapHeight = 1200;
-                const padding = 100; // Leave some padding around edges
+                // Convert PTFS coordinates to map coordinates using fixed world bounds
+                // Scale to a reasonable map area (800x800 pixels centered in 1200x1200)
+                const mapScale = 400; // Reduced scale to bring aircraft closer to center
                 
-                // Normalize coordinates based on actual aircraft ranges
-                const normalizedX = ptfsXRange > 1000 ? (ptfsX - minX) / ptfsXRange : 0.5;
-                const normalizedY = ptfsYRange > 1000 ? (ptfsY - minY) / ptfsYRange : 0.5;
+                const normalizedX = (ptfsX - PTFS_WORLD_BOUNDS.minX) / (PTFS_WORLD_BOUNDS.maxX - PTFS_WORLD_BOUNDS.minX);
+                const normalizedY = (ptfsY - PTFS_WORLD_BOUNDS.minY) / (PTFS_WORLD_BOUNDS.maxY - PTFS_WORLD_BOUNDS.minY);
                 
-                // Convert to map coordinates with padding and slight upward adjustment
-                let mapX = padding + (normalizedX * (mapWidth - 2 * padding));
-                let mapY = padding + (normalizedY * (mapHeight - 2 * padding)) - 30; // Move aircraft up by 30 pixels
+                // Center the map and apply scale
+                let mapX = mapCenterX + ((normalizedX - 0.5) * mapScale);
+                let mapY = mapCenterY + ((normalizedY - 0.5) * mapScale);
                 
-                // Ensure aircraft stay within map bounds
+                // Ensure aircraft stay within visible bounds
                 mapX = Math.max(50, Math.min(1150, mapX));
-                mapY = Math.max(30, Math.min(1150, mapY)); // Adjusted to account for upward shift
+                mapY = Math.max(50, Math.min(1150, mapY));
 
                 // Store debug info
                 debugInfo.push({
                     callsign,
                     ptfs: { x: ptfsX, y: ptfsY },
-                    direct_conversion: { x: ptfsX / 100, y: ptfsY / 100 },
+                    normalized: { x: normalizedX.toFixed(3), y: normalizedY.toFixed(3) },
                     svg: { x: Math.round(mapX), y: Math.round(mapY) }
                 });
 
@@ -2186,7 +2193,7 @@
                 liveAircraftMarkers.appendChild(aircraftMarker);
             });
 
-            // Add status and debug info
+            // Add status info
             if (validAircraftCount > 0) {
                 const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 statusText.setAttribute('x', '20');
@@ -2199,33 +2206,10 @@
                 statusText.textContent = `${validAircraftCount} Active Aircraft`;
                 liveAircraftMarkers.appendChild(statusText);
 
-                // Debug coordinate info
-                const debugText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                debugText.setAttribute('x', '20');
-                debugText.setAttribute('y', '55');
-                debugText.setAttribute('fill', '#4a90e2');
-                debugText.setAttribute('font-size', '12');
-                debugText.setAttribute('stroke', '#000');
-                debugText.setAttribute('stroke-width', '0.5');
-                debugText.textContent = `PTFS Range: X(${minX} to ${maxX}) Y(${minY} to ${maxY})`;
-                liveAircraftMarkers.appendChild(debugText);
-
-                // Additional debug info
-                const debugText2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                debugText2.setAttribute('x', '20');
-                debugText2.setAttribute('y', '75');
-                debugText2.setAttribute('fill', '#4a90e2');
-                debugText2.setAttribute('font-size', '10');
-                debugText2.setAttribute('stroke', '#000');
-                debugText2.setAttribute('stroke-width', '0.5');
-                debugText2.textContent = `Dynamic scaling: ${Math.round(ptfsXRange)} x ${Math.round(ptfsYRange)} PTFS units`;
-                liveAircraftMarkers.appendChild(debugText2);
-
                 // Log first aircraft coordinates for debugging
                 if (debugInfo.length > 0) {
                     console.log('🛩️ Fixed coordinate conversion:', debugInfo[0]);
-                    console.log(`📊 PTFS Ranges: X(${minX} to ${maxX}), Y(${minY} to ${maxY})`);
-                    console.log('📍 All aircraft positions:', debugInfo.slice(0, 3)); // Show first 3 for debugging
+                    console.log('📍 Sample aircraft positions:', debugInfo.slice(0, 3));
                 }
             }
 
