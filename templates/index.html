@@ -2062,19 +2062,24 @@
                 const ptfsX = aircraftData.position.x; // PTFS X position
                 const ptfsY = aircraftData.position.y; // PTFS Y position
 
-                // Center the aircraft on the 1200x1200 map
-                // Use map center (600, 600) as origin point
+                // Scale aircraft to fit within 1200x1200 map bounds
+                const mapWidth = 1200;
+                const mapHeight = 1200;
                 const mapCenterX = 600;
                 const mapCenterY = 600;
                 
-                // Convert PTFS coordinates to map coordinates
-                // Scale down by 100 (1px = 100 studs) and center on map
-                // In PTFS: +x is East, +y is North
-                // In SVG: +x is East, +y is South (flipped from PTFS)
-                let mapX = mapCenterX + (ptfsX / 100);  // Direct conversion with centering
-                let mapY = mapCenterY + (ptfsY / 100);  // FIXED: Flip Y axis - add instead of subtract
+                // Determine scaling factor based on actual aircraft coordinate ranges
+                // From console logs, aircraft range roughly from -30000 to +35000 in PTFS coords
+                const ptfsRange = 65000; // Approximate range of PTFS coordinates
+                const mapRange = 1000;   // Use 1000x1000 of the 1200x1200 map (leave 100px border)
+                const scaleFactor = mapRange / ptfsRange;
                 
-                // Clamp to reasonable bounds for visibility
+                // Convert and scale PTFS coordinates to map coordinates
+                // Center at (600,600) and scale to fit within map bounds
+                let mapX = mapCenterX + (ptfsX * scaleFactor);
+                let mapY = mapCenterY - (ptfsY * scaleFactor); // Flip Y axis: PTFS +Y=North, SVG +Y=South
+                
+                // Ensure aircraft stay within map bounds with small buffer
                 mapX = Math.max(50, Math.min(1150, mapX));
                 mapY = Math.max(50, Math.min(1150, mapY));
 
