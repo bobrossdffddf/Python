@@ -2062,18 +2062,21 @@
                 const ptfsX = aircraftData.position.x; // PTFS X position
                 const ptfsY = aircraftData.position.y; // PTFS Y position
 
-                // API Specification: 1px = 100 studs, 0,0 game = 0,0 SVG
-                // Aircraft position: -y is North, -x is West
+                // Center the aircraft on the 1200x1200 map
+                // Use map center (600, 600) as origin point
+                const mapCenterX = 600;
+                const mapCenterY = 600;
                 
-                // Direct conversion as per API docs
-                // Convert studs to pixels (divide by 100)
-                // Handle coordinate system: -x is West, -y is North
-                let mapX = -ptfsX / 100;  // -x is West, so negate for SVG coordinates
-                let mapY = -ptfsY / 100;  // -y is North, so negate for SVG coordinates
+                // Convert PTFS coordinates to map coordinates
+                // Scale down by 100 (1px = 100 studs) and center on map
+                // In PTFS: -x is West, -y is North
+                // In SVG: +x is East, +y is South
+                let mapX = mapCenterX + (ptfsX / 100);  // Direct conversion with centering
+                let mapY = mapCenterY - (ptfsY / 100);  // Flip Y axis and center
                 
-                // No clamping needed - let aircraft appear wherever they are
-                // The map will show aircraft even if they're outside visible bounds
-                // mapX and mapY can be any value - SVG will handle it
+                // Clamp to reasonable bounds for visibility
+                mapX = Math.max(50, Math.min(1150, mapX));
+                mapY = Math.max(50, Math.min(1150, mapY));
 
                 // Store debug info
                 debugInfo.push({
