@@ -441,7 +441,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: rgba(255, 255, 255, 0.95);
+            background: linear-gradient(135deg, #0f0f23, #1a1a3e);
             position: relative;
         }
 
@@ -727,6 +727,74 @@
             font-size: 1.1rem;
             font-weight: 300;
         }
+
+        .mouse-coordinates {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #50c878;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10001;
+            pointer-events: none;
+            border: 1px solid rgba(80, 200, 120, 0.3);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .live-map-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #0f0f23, #1a1a3e);
+            z-index: 2000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .live-map-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #1a1a3e, #0f0f23);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .live-map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .live-map-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0f0f23, #1a1a3e);
+        }
+
+        .live-map-svg {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            background: linear-gradient(135deg, #0f0f23, #1a1a3e);
+        }
+
+        .live-map-svg.dragging {
+            cursor: grabbing;
+        }
     </style>
 </head>
 <body>
@@ -773,6 +841,10 @@
             <div class="control-group">
                 <label>⚙️ Actions</label>
                 <button onclick="clearHistory()">🗑️ Clear History</button>
+            </div>
+            <div class="control-group">
+                <label>🗺️ Live Map</label>
+                <button onclick="openLiveMap()">📍 Live Map</button>
             </div>
         </div>
 
@@ -909,6 +981,26 @@
         </div>
             </div>
         </div>
+    </div>
+
+    <!-- Live Map Overlay -->
+    <div id="liveMapOverlay" class="live-map-overlay">
+        <div class="live-map-content">
+            <div class="live-map-header">
+                <h2 class="modal-title">🗺️ Live Flight Map - All Active Aircraft</h2>
+                <span class="close" onclick="closeLiveMap()">&times;</span>
+            </div>
+            <div class="live-map-container" id="liveMapContainer">
+                <svg id="liveMapSVG" class="live-map-svg" viewBox="0 0 964 921">
+                    <!-- Background will be inserted here -->
+                    <g id="liveFlightPaths"></g>
+                    <g id="liveAircraftMarkers"></g>
+                </svg>
+            </div>
+        </div>
+    </div>
+    <div id="mouseCoordinates" class="mouse-coordinates" style="display: none;">
+        X: 0, Y: 0
     </div>
 
     <!-- Fullscreen Map Overlay -->
@@ -1686,19 +1778,25 @@
             const zoomableContent = document.getElementById('zoomableContent');
             if (!zoomableContent) return;
             
-            // Mouse wheel zoom
+            // Mouse wheel zoom - fixed to zoom on content, not screen
             zoomableContent.addEventListener('wheel', function(e) {
                 e.preventDefault();
-                const rect = zoomableContent.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
                 
-                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                // Get the content's actual dimensions and position
+                const contentRect = zoomableContent.getBoundingClientRect();
+                const containerRect = zoomableContent.parentElement.getBoundingClientRect();
+                
+                // Calculate mouse position relative to the content
+                const mouseX = (e.clientX - contentRect.left) / currentZoom;
+                const mouseY = (e.clientY - contentRect.top) / currentZoom;
+                
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9; // Fixed zoom direction
                 const newZoom = Math.max(0.1, Math.min(currentZoom * zoomFactor, 10));
                 
-                // Zoom towards mouse position
-                panX += (mouseX - rect.width / 2) * (1 - zoomFactor) * currentZoom;
-                panY += (mouseY - rect.height / 2) * (1 - zoomFactor) * currentZoom;
+                // Calculate new pan to keep mouse position stable
+                const zoomChange = newZoom / currentZoom;
+                panX = panX * zoomChange + mouseX * (currentZoom - newZoom);
+                panY = panY * zoomChange + mouseY * (currentZoom - newZoom);
                 
                 currentZoom = newZoom;
                 updateTransform();
@@ -1719,8 +1817,8 @@
                     const deltaX = e.clientX - lastMouseX;
                     const deltaY = e.clientY - lastMouseY;
                     
-                    panX += deltaX;
-                    panY += deltaY;
+                    panX += deltaX / currentZoom; // Scale pan by zoom level
+                    panY += deltaY / currentZoom;
                     
                     lastMouseX = e.clientX;
                     lastMouseY = e.clientY;
@@ -1738,8 +1836,285 @@
         function updateTransform() {
             const zoomableContent = document.getElementById('zoomableContent');
             if (zoomableContent) {
-                zoomableContent.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+                zoomableContent.style.transform = `scale(${currentZoom}) translate(${panX}px, ${panY}px)`;
             }
+        }
+
+        // Live Map Functions
+        let liveMapZoom = 1;
+        let liveMapPanX = 0;
+        let liveMapPanY = 0;
+        let liveMapDragging = false;
+        let liveMapLastX = 0;
+        let liveMapLastY = 0;
+        let liveMapUpdateInterval = null;
+
+        function openLiveMap() {
+            const liveMapOverlay = document.getElementById('liveMapOverlay');
+            const mouseCoordinates = document.getElementById('mouseCoordinates');
+            
+            liveMapOverlay.style.display = 'block';
+            mouseCoordinates.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            
+            setupLiveMapControls();
+            loadGameMapBackground();
+            updateLiveMapFlights();
+            
+            // Start live updates
+            liveMapUpdateInterval = setInterval(updateLiveMapFlights, 2000);
+        }
+
+        function closeLiveMap() {
+            const liveMapOverlay = document.getElementById('liveMapOverlay');
+            const mouseCoordinates = document.getElementById('mouseCoordinates');
+            
+            liveMapOverlay.style.display = 'none';
+            mouseCoordinates.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            
+            if (liveMapUpdateInterval) {
+                clearInterval(liveMapUpdateInterval);
+                liveMapUpdateInterval = null;
+            }
+        }
+
+        function loadGameMapBackground() {
+            const liveMapSVG = document.getElementById('liveMapSVG');
+            const gameMapPath = window.MAP_CONFIG ? window.MAP_CONFIG.gameMapPath : '/static/maps/game_map.svg';
+            
+            fetch(gameMapPath)
+                .then(response => response.text())
+                .then(svgContent => {
+                    // Extract the content inside the SVG tags
+                    const parser = new DOMParser();
+                    const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
+                    const svgElement = svgDoc.querySelector('svg');
+                    
+                    if (svgElement) {
+                        // Create background group and add all SVG content to it
+                        let bgGroup = liveMapSVG.querySelector('#gameMapBackground');
+                        if (!bgGroup) {
+                            bgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                            bgGroup.id = 'gameMapBackground';
+                            liveMapSVG.insertBefore(bgGroup, liveMapSVG.firstChild);
+                        }
+                        
+                        // Copy all children from the loaded SVG
+                        while (svgElement.firstChild) {
+                            bgGroup.appendChild(document.importNode(svgElement.firstChild, true));
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.log('Game map not found, using colored background');
+                    // Add colored background rectangle
+                    let bgGroup = liveMapSVG.querySelector('#gameMapBackground');
+                    if (!bgGroup) {
+                        bgGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                        bgGroup.id = 'gameMapBackground';
+                        liveMapSVG.insertBefore(bgGroup, liveMapSVG.firstChild);
+                    }
+                    
+                    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    bgRect.setAttribute('x', '0');
+                    bgRect.setAttribute('y', '0');
+                    bgRect.setAttribute('width', '964');
+                    bgRect.setAttribute('height', '921');
+                    bgRect.setAttribute('fill', 'url(#mapBg)');
+                    bgGroup.appendChild(bgRect);
+                    
+                    // Add gradient definition
+                    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                    const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+                    gradient.setAttribute('id', 'mapBg');
+                    gradient.setAttribute('gradientTransform', 'rotate(135)');
+                    
+                    const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+                    stop1.setAttribute('offset', '0%');
+                    stop1.setAttribute('stop-color', '#0f0f23');
+                    
+                    const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+                    stop2.setAttribute('offset', '100%');
+                    stop2.setAttribute('stop-color', '#1a1a3e');
+                    
+                    gradient.appendChild(stop1);
+                    gradient.appendChild(stop2);
+                    defs.appendChild(gradient);
+                    liveMapSVG.insertBefore(defs, liveMapSVG.firstChild);
+                });
+        }
+
+        function setupLiveMapControls() {
+            const liveMapSVG = document.getElementById('liveMapSVG');
+            const mouseCoordinates = document.getElementById('mouseCoordinates');
+            
+            // Mouse move for coordinates
+            liveMapSVG.addEventListener('mousemove', function(e) {
+                const rect = liveMapSVG.getBoundingClientRect();
+                const x = Math.round((e.clientX - rect.left) / rect.width * 964);
+                const y = Math.round((e.clientY - rect.top) / rect.height * 921);
+                
+                mouseCoordinates.textContent = `X: ${x}, Y: ${y}`;
+                mouseCoordinates.style.left = (e.clientX + 15) + 'px';
+                mouseCoordinates.style.top = (e.clientY - 30) + 'px';
+            });
+            
+            // Zoom with mouse wheel
+            liveMapSVG.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                const rect = liveMapSVG.getBoundingClientRect();
+                const mouseX = (e.clientX - rect.left - rect.width/2) / liveMapZoom;
+                const mouseY = (e.clientY - rect.top - rect.height/2) / liveMapZoom;
+                
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                const newZoom = Math.max(0.5, Math.min(liveMapZoom * zoomFactor, 10));
+                
+                liveMapPanX += mouseX * (1 - zoomFactor);
+                liveMapPanY += mouseY * (1 - zoomFactor);
+                
+                liveMapZoom = newZoom;
+                updateLiveMapTransform();
+            });
+            
+            // Pan with mouse drag
+            liveMapSVG.addEventListener('mousedown', function(e) {
+                liveMapDragging = true;
+                liveMapLastX = e.clientX;
+                liveMapLastY = e.clientY;
+                liveMapSVG.classList.add('dragging');
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (liveMapDragging) {
+                    const deltaX = (e.clientX - liveMapLastX) / liveMapZoom;
+                    const deltaY = (e.clientY - liveMapLastY) / liveMapZoom;
+                    
+                    liveMapPanX += deltaX;
+                    liveMapPanY += deltaY;
+                    
+                    liveMapLastX = e.clientX;
+                    liveMapLastY = e.clientY;
+                    
+                    updateLiveMapTransform();
+                }
+            });
+            
+            document.addEventListener('mouseup', function() {
+                liveMapDragging = false;
+                liveMapSVG.classList.remove('dragging');
+            });
+        }
+
+        function updateLiveMapTransform() {
+            const liveFlightPaths = document.getElementById('liveFlightPaths');
+            const liveAircraftMarkers = document.getElementById('liveAircraftMarkers');
+            
+            const transform = `translate(${liveMapPanX} ${liveMapPanY}) scale(${liveMapZoom})`;
+            
+            if (liveFlightPaths) liveFlightPaths.setAttribute('transform', transform);
+            if (liveAircraftMarkers) liveAircraftMarkers.setAttribute('transform', transform);
+        }
+
+        function updateLiveMapFlights() {
+            if (!liveAircraftData) return;
+            
+            const liveFlightPaths = document.getElementById('liveFlightPaths');
+            const liveAircraftMarkers = document.getElementById('liveAircraftMarkers');
+            
+            if (!liveFlightPaths || !liveAircraftMarkers) return;
+            
+            // Clear existing elements
+            liveFlightPaths.innerHTML = '';
+            liveAircraftMarkers.innerHTML = '';
+            
+            // Add all active aircraft
+            Object.keys(liveAircraftData).forEach(callsign => {
+                const aircraftData = liveAircraftData[callsign];
+                if (!aircraftData || !aircraftData.position) return;
+                
+                // Convert PTFS coordinates to map coordinates (rough conversion)
+                const mapX = Math.max(0, Math.min(964, (aircraftData.position.x + 3500) * (964 / 7000)));
+                const mapY = Math.max(0, Math.min(921, (4500 - aircraftData.position.y) * (921 / 4500)));
+                
+                // Find matching flight plan for route line
+                const flightPlan = flights.find(f => f.callsign === callsign);
+                
+                if (flightPlan) {
+                    const depCoords = GAME_MAP_COORDINATES[flightPlan.departing];
+                    const arrCoords = GAME_MAP_COORDINATES[flightPlan.arriving];
+                    
+                    if (depCoords && arrCoords) {
+                        // Add route line
+                        const routeLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        routeLine.setAttribute('x1', depCoords.x);
+                        routeLine.setAttribute('y1', depCoords.y);
+                        routeLine.setAttribute('x2', arrCoords.x);
+                        routeLine.setAttribute('y2', arrCoords.y);
+                        routeLine.setAttribute('stroke', '#4a90e2');
+                        routeLine.setAttribute('stroke-width', '2');
+                        routeLine.setAttribute('stroke-dasharray', '5,5');
+                        routeLine.setAttribute('opacity', '0.6');
+                        liveFlightPaths.appendChild(routeLine);
+                        
+                        // Add departure airport marker
+                        const depMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        depMarker.setAttribute('cx', depCoords.x);
+                        depMarker.setAttribute('cy', depCoords.y);
+                        depMarker.setAttribute('r', '6');
+                        depMarker.setAttribute('fill', '#50c878');
+                        depMarker.setAttribute('stroke', 'white');
+                        depMarker.setAttribute('stroke-width', '1');
+                        liveAircraftMarkers.appendChild(depMarker);
+                        
+                        // Add arrival airport marker
+                        const arrMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        arrMarker.setAttribute('cx', arrCoords.x);
+                        arrMarker.setAttribute('cy', arrCoords.y);
+                        arrMarker.setAttribute('r', '6');
+                        arrMarker.setAttribute('fill', '#f44336');
+                        arrMarker.setAttribute('stroke', 'white');
+                        arrMarker.setAttribute('stroke-width', '1');
+                        liveAircraftMarkers.appendChild(arrMarker);
+                    }
+                }
+                
+                // Add aircraft marker
+                const aircraftMarker = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', mapX);
+                circle.setAttribute('cy', mapY);
+                circle.setAttribute('r', '8');
+                circle.setAttribute('fill', '#ffff00');
+                circle.setAttribute('stroke', 'white');
+                circle.setAttribute('stroke-width', '2');
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', mapX);
+                text.setAttribute('y', mapY - 15);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#ffff00');
+                text.setAttribute('font-size', '10');
+                text.setAttribute('font-weight', 'bold');
+                text.textContent = callsign;
+                
+                const infoText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                infoText.setAttribute('x', mapX);
+                infoText.setAttribute('y', mapY + 25);
+                infoText.setAttribute('text-anchor', 'middle');
+                infoText.setAttribute('fill', '#ffffff');
+                infoText.setAttribute('font-size', '8');
+                infoText.textContent = `${aircraftData.altitude}ft ${Math.round(aircraftData.groundSpeed)}kts`;
+                
+                aircraftMarker.appendChild(circle);
+                aircraftMarker.appendChild(text);
+                aircraftMarker.appendChild(infoText);
+                
+                liveAircraftMarkers.appendChild(aircraftMarker);
+            });
+            
+            updateLiveMapTransform();
         }
 
         function zoomIn() {
@@ -1794,6 +2169,7 @@
         window.onclick = function(event) {
             const modal = document.getElementById('flightModal');
             const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+            const liveMapOverlay = document.getElementById('liveMapOverlay');
             
             if (event.target === modal) {
                 closeModal();
@@ -1801,12 +2177,16 @@
             if (event.target === fullscreenOverlay) {
                 closeFullscreenMap();
             }
+            if (event.target === liveMapOverlay) {
+                closeLiveMap();
+            }
         }
 
         // Close fullscreen on Escape key
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 closeFullscreenMap();
+                closeLiveMap();
             }
         });
     </script>
