@@ -287,6 +287,18 @@ def set_airport_filter():
 def get_airport_filter():
     return jsonify({"filter": current_airport_filter})
 
+@app.route('/static/maps/<path:filename>')
+def serve_map_file(filename):
+    """Serve map files from the static/maps directory"""
+    import os
+    from flask import send_from_directory
+    
+    maps_dir = os.path.join(os.path.dirname(__file__), 'static', 'maps')
+    if os.path.exists(os.path.join(maps_dir, filename)):
+        return send_from_directory(maps_dir, filename)
+    else:
+        return f"Map file {filename} not found", 404
+
 if __name__ == '__main__':
     ws_thread = threading.Thread(target=start_ws_loop, daemon=True)
     ws_thread.start()

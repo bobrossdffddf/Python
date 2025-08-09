@@ -907,17 +907,46 @@
             const mapDiv = document.getElementById('departureMap');
             if (!currentFlightData) return;
 
-            mapDiv.innerHTML = `
-                <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-                    <div style="background: rgba(80, 200, 120, 0.2); border: 2px solid #50c878; border-radius: 10px; padding: 20px; margin: 10px;">
-                        <h4 style="color: #50c878; margin: 0 0 10px 0;">${currentFlightData.departing}</h4>
-                        <div style="color: #ffffff;">🛫 Departure Airport</div>
-                        <div style="font-size: 12px; color: #ccc; margin-top: 5px;">Ground Chart Layout</div>
-                    </div>
-                    <div style="width: 80%; height: 2px; background: #50c878; margin: 10px;"></div>
-                    <div style="font-size: 12px; color: #ccc;">Runway ${document.getElementById('runwayInput').value || '___'}</div>
-                </div>
-            `;
+            const airportCode = currentFlightData.departing;
+            const mapFileName = `airport_diagram_${airportCode}.svg`;
+            
+            // Try to load the SVG file
+            fetch(`/static/maps/${mapFileName}`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        throw new Error(`Map not found: ${mapFileName}`);
+                    }
+                })
+                .then(svgContent => {
+                    mapDiv.innerHTML = `
+                        <div style="height: 100%; display: flex; flex-direction: column;">
+                            <div style="text-align: center; margin-bottom: 10px;">
+                                <h4 style="color: #50c878; margin: 0;">${airportCode} - Departure</h4>
+                                <div style="font-size: 12px; color: #ccc;">Runway ${document.getElementById('runwayInput').value || '___'}</div>
+                            </div>
+                            <div style="flex: 1; overflow: auto;">
+                                ${svgContent}
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.log(`No map found for ${airportCode}:`, error);
+                    mapDiv.innerHTML = `
+                        <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+                            <div style="background: rgba(80, 200, 120, 0.2); border: 2px solid #50c878; border-radius: 10px; padding: 20px; margin: 10px;">
+                                <h4 style="color: #50c878; margin: 0 0 10px 0;">${airportCode}</h4>
+                                <div style="color: #ffffff;">🛫 Departure Airport</div>
+                                <div style="font-size: 12px; color: #ccc; margin-top: 5px;">Ground Chart Layout</div>
+                                <div style="font-size: 11px; color: #888; margin-top: 10px;">No diagram available</div>
+                            </div>
+                            <div style="width: 80%; height: 2px; background: #50c878; margin: 10px;"></div>
+                            <div style="font-size: 12px; color: #ccc;">Runway ${document.getElementById('runwayInput').value || '___'}</div>
+                        </div>
+                    `;
+                });
         }
 
         function generateRouteMap() {
@@ -972,17 +1001,46 @@
             const mapDiv = document.getElementById('arrivalMap');
             if (!currentFlightData) return;
 
-            mapDiv.innerHTML = `
-                <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-                    <div style="background: rgba(244, 67, 54, 0.2); border: 2px solid #f44336; border-radius: 10px; padding: 20px; margin: 10px;">
-                        <h4 style="color: #f44336; margin: 0 0 10px 0;">${currentFlightData.arriving}</h4>
-                        <div style="color: #ffffff;">🛬 Arrival Airport</div>
-                        <div style="font-size: 12px; color: #ccc; margin-top: 5px;">Ground Chart Layout</div>
-                    </div>
-                    <div style="width: 80%; height: 2px; background: #f44336; margin: 10px;"></div>
-                    <div style="font-size: 12px; color: #ccc;">Approach & Landing</div>
-                </div>
-            `;
+            const airportCode = currentFlightData.arriving;
+            const mapFileName = `airport_diagram_${airportCode}.svg`;
+            
+            // Try to load the SVG file
+            fetch(`/static/maps/${mapFileName}`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        throw new Error(`Map not found: ${mapFileName}`);
+                    }
+                })
+                .then(svgContent => {
+                    mapDiv.innerHTML = `
+                        <div style="height: 100%; display: flex; flex-direction: column;">
+                            <div style="text-align: center; margin-bottom: 10px;">
+                                <h4 style="color: #f44336; margin: 0;">${airportCode} - Arrival</h4>
+                                <div style="font-size: 12px; color: #ccc;">Approach & Landing</div>
+                            </div>
+                            <div style="flex: 1; overflow: auto;">
+                                ${svgContent}
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.log(`No map found for ${airportCode}:`, error);
+                    mapDiv.innerHTML = `
+                        <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+                            <div style="background: rgba(244, 67, 54, 0.2); border: 2px solid #f44336; border-radius: 10px; padding: 20px; margin: 10px;">
+                                <h4 style="color: #f44336; margin: 0 0 10px 0;">${airportCode}</h4>
+                                <div style="color: #ffffff;">🛬 Arrival Airport</div>
+                                <div style="font-size: 12px; color: #ccc; margin-top: 5px;">Ground Chart Layout</div>
+                                <div style="font-size: 11px; color: #888; margin-top: 10px;">No diagram available</div>
+                            </div>
+                            <div style="width: 80%; height: 2px; background: #f44336; margin: 10px;"></div>
+                            <div style="font-size: 12px; color: #ccc;">Approach & Landing</div>
+                        </div>
+                    `;
+                });
         }
 
         function updatePTFSStats(flight) {
