@@ -1053,17 +1053,8 @@
             'enroute_high': '/static/maps/enroute_high_altitude.png'
         };
 
-        // Load coordinates from config file
-        const GAME_MAP_COORDINATES = window.MAP_CONFIG ? window.MAP_CONFIG.airportMapCoordinates : {
-            'IBAR': {'x': 300, 'y': 200}, 'IHEN': {'x': 450, 'y': 180}, 'ILAR': {'x': 250, 'y': 150},
-            'IIAB': {'x': 500, 'y': 220}, 'IPAP': {'x': 150, 'y': 100}, 'IGRV': {'x': 400, 'y': 250},
-            'IJAF': {'x': 100, 'y': 80}, 'IZOL': {'x': 50, 'y': 120}, 'ISCM': {'x': 180, 'y': 200},
-            'IDCS': {'x': 550, 'y': 150}, 'ITKO': {'x': 280, 'y': 280}, 'ILKL': {'x': 320, 'y': 70},
-            'IPPH': {'x': 20, 'y': 200}, 'IGAR': {'x': 150, 'y': 50}, 'IBLT': {'x': 520, 'y': 190},
-            'IRFD': {'x': 80, 'y': 130}, 'IMLR': {'x': 450, 'y': 270}, 'ITRC': {'x': 50, 'y': 30},
-            'IBTH': {'x': 200, 'y': 170}, 'IUFO': {'x': 120, 'y': 110}, 'ISAU': {'x': 480, 'y': 130},
-            'ISKP': {'x': 30, 'y': 40}
-        };
+        // Load coordinates from config file - these are now PTFS coordinates that get converted
+        const GAME_MAP_COORDINATES = window.MAP_CONFIG ? window.MAP_CONFIG.airportMapCoordinates : AIRPORT_COORDINATES;
 
         // PTFS coordinates for distance calculations (keep existing)
         const AIRPORT_COORDINATES = {
@@ -1357,16 +1348,40 @@
         }
 
         function createInteractiveGameMap(departure, arrival, mapDiv, mapPath) {
-            const depCoords = GAME_MAP_COORDINATES[departure];
-            const arrCoords = GAME_MAP_COORDINATES[arrival];
+            // Convert PTFS coordinates to map coordinates for airports
+            const depPTFS = AIRPORT_COORDINATES[departure];
+            const arrPTFS = AIRPORT_COORDINATES[arrival];
 
-            if (!depCoords || !arrCoords) {
+            if (!depPTFS || !arrPTFS) {
                 generateDynamicRouteMap(departure, arrival);
                 return;
             }
 
-            // Use proper viewBox from config (should be "0 0 964 921" for your map)
-            const viewBox = window.MAP_CONFIG ? window.MAP_CONFIG.viewBox : "0 0 964 921";
+            // Convert PTFS airport coordinates to map coordinates using same system as aircraft
+            const mapWidth = 1200;
+            const mapHeight = 1200;
+            const mapCenterX = 600;
+            const mapCenterY = 600;
+            const ptfsXRange = 2750;
+            const ptfsYRange = 2760;
+            const mapScale = 900;
+
+            const depNormX = (depPTFS.x + 3200) / ptfsXRange;
+            const depNormY = (depPTFS.z - 1340) / ptfsYRange;
+            const depCoords = {
+                x: (mapCenterX - mapScale/2) + (depNormX * mapScale),
+                y: (mapCenterY - mapScale/2) + (depNormY * mapScale)
+            };
+
+            const arrNormX = (arrPTFS.x + 3200) / ptfsXRange;
+            const arrNormY = (arrPTFS.z - 1340) / ptfsYRange;
+            const arrCoords = {
+                x: (mapCenterX - mapScale/2) + (arrNormX * mapScale),
+                y: (mapCenterY - mapScale/2) + (arrNormY * mapScale)
+            };
+
+            // Use proper viewBox from config
+            const viewBox = window.MAP_CONFIG ? window.MAP_CONFIG.viewBox : "0 0 1200 1200";
 
             mapDiv.innerHTML = `
                 <div style="height: 100%; display: flex; flex-direction: column;">
@@ -1422,29 +1437,45 @@
 
             if (!aircraftMarker || !aircraftCallsignText) return;
 
-            // For now, we'll need to calibrate this once airports are properly positioned
-            // This is a placeholder calculation that needs to be adjusted based on your map
-            const mapWidth = 964;
-            const mapHeight = 921;
+            // Get the current aircraft data
+            const currentAircraftData = liveAircraftData[trackingCallsign];
+            if (!currentAircraftData || !currentAircraftData.position) return;
 
-            // Temporary conversion - will need adjustment based on actual map coordinate system
-            // You'll need to calibrate this by comparing known PTFS positions with map positions
-            const svgX = (aircraftData.position.x + 3500) * (mapWidth / 7000); // Rough estimate
-            const svgY = (4500 - aircraftData.position.y) * (mapHeight / 4500); // Rough estimate
+            // Use the same coordinate conversion as live map for consistency
+            const mapWidth = 1200;
+            const mapHeight = 1200;
+            const mapCenterX = 600;
+            const mapCenterY = 600;
+            
+            const ptfsX = currentAircraftData.position.x;
+            const ptfsY = currentAircraftData.position.y;
+            
+            // Same scaling as live map - aircraft range roughly -30000 to +35000
+            const ptfsRange = 65000;
+            const mapRange = 1200;
+            const scaleFactor = mapRange / ptfsRange;
+            
+            // Convert PTFS coordinates to map coordinates
+            let mapX = mapCenterX + (ptfsX * scaleFactor);
+            let mapY = mapCenterY + (ptfsY * scaleFactor);
+            
+            // Ensure within bounds
+            mapX = Math.max(0, Math.min(1200, mapX));
+            mapY = Math.max(0, Math.min(1200, mapY));
 
             aircraftMarker.style.display = 'block';
-            aircraftMarker.setAttribute('transform', `translate(${svgX}, ${svgY})`);
+            aircraftMarker.setAttribute('transform', `translate(${mapX}, ${mapY})`);
             aircraftCallsignText.textContent = trackingCallsign;
 
             // Update tracking status
             const trackingStatus = document.getElementById('trackingStatus');
             if (trackingStatus) {
                 trackingStatus.innerHTML = `
-                    🛩️ Live: ${trackingCallsign} | Alt: ${aircraftData.altitude}ft | 
-                    Speed: ${Math.round(aircraftData.groundSpeed)}kts | 
-                    Heading: ${aircraftData.heading}° | 
-                    PTFS: ${aircraftData.position.x}, ${aircraftData.position.y} | 
-                    Map: ${svgX.toFixed(1)}, ${svgY.toFixed(1)}
+                    🛩️ Live: ${trackingCallsign} | Alt: ${currentAircraftData.altitude}ft | 
+                    Speed: ${Math.round(currentAircraftData.groundSpeed || 0)}kts | 
+                    Heading: ${currentAircraftData.heading || 0}° | 
+                    PTFS: ${ptfsX}, ${ptfsY} | 
+                    Map: ${mapX.toFixed(1)}, ${mapY.toFixed(1)}
                 `;
             }
         }
@@ -2057,31 +2088,34 @@
 
                 validAircraftCount++;
 
-                // COMPLETELY DIFFERENT APPROACH - Use 1:100 scale conversion
-                // According to your original instruction: 1px in SVG = 100 studs in game
                 const ptfsX = aircraftData.position.x; // PTFS X position
                 const ptfsY = aircraftData.position.y; // PTFS Y position
 
-                // Scale aircraft to fit within 1200x1200 map bounds
+                // Use consistent coordinate system based on actual PTFS coordinate ranges
                 const mapWidth = 1200;
                 const mapHeight = 1200;
                 const mapCenterX = 600;
                 const mapCenterY = 600;
                 
-                // Determine scaling factor based on actual aircraft coordinate ranges
-                // From console logs, aircraft range roughly from -30000 to +35000 in PTFS coords
-                const ptfsRange = 65000; // Approximate range of PTFS coordinates
-                const mapRange = 1200;   // Use 1000x1000 of the 1200x1200 map (leave 100px border)
-                const scaleFactor = mapRange / ptfsRange;
+                // Based on your AIRPORT_COORDINATES, PTFS coords range roughly:
+                // X: -3200 to -450 (range ~2750)
+                // Z: 1340 to 4100 (range ~2760)
+                // Scale to use most of the 1200x1200 map
+                const ptfsXRange = 2750;
+                const ptfsYRange = 2760;
+                const mapScale = 900; // Use 900 pixels of the 1200x1200 map
                 
-                // Convert and scale PTFS coordinates to map coordinates
-                // Center at (600,600) and scale to fit within map bounds
-                let mapX = mapCenterX + (ptfsX * scaleFactor);
-                let mapY = mapCenterY + (ptfsY * scaleFactor); // FLIPPED: Aircraft Y-axis only
+                // Normalize coordinates based on actual airport ranges
+                const normalizedX = (ptfsX + 3200) / ptfsXRange; // -3200 to -450 becomes 0 to 1
+                const normalizedY = (ptfsY - 1340) / ptfsYRange; // 1340 to 4100 becomes 0 to 1
                 
-                // Ensure aircraft stay within map bounds with small buffer
-                mapX = Math.max(0, Math.min(1200, mapX));
-                mapY = Math.max(0, Math.min(1200, mapY));
+                // Convert to map coordinates (center in 1200x1200 map)
+                let mapX = (mapCenterX - mapScale/2) + (normalizedX * mapScale);
+                let mapY = (mapCenterY - mapScale/2) + (normalizedY * mapScale);
+                
+                // Ensure aircraft stay within map bounds
+                mapX = Math.max(50, Math.min(1150, mapX));
+                mapY = Math.max(50, Math.min(1150, mapY));
 
                 // Store debug info
                 debugInfo.push({
