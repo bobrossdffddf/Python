@@ -790,10 +790,44 @@
             height: 100%;
             cursor: grab;
             background: linear-gradient(135deg, #0f0f23, #1a1a3e);
+            transition: transform 0.1s ease-out;
         }
 
         .live-map-svg.dragging {
             cursor: grabbing;
+            transition: none;
+        }
+
+        .live-map-zoom-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .live-map-zoom-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(74, 144, 226, 0.9);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .live-map-zoom-btn:hover {
+            background: rgba(74, 144, 226, 1);
+            transform: scale(1.1);
         }
     </style>
 </head>
@@ -991,6 +1025,11 @@
                 <span class="close" onclick="closeLiveMap()">&times;</span>
             </div>
             <div class="live-map-container" id="liveMapContainer">
+                <div class="live-map-zoom-controls">
+                    <button class="live-map-zoom-btn" onclick="liveMapZoomIn()" title="Zoom In">+</button>
+                    <button class="live-map-zoom-btn" onclick="liveMapZoomOut()" title="Zoom Out">−</button>
+                    <button class="live-map-zoom-btn" onclick="liveMapResetZoom()" title="Reset View">⌂</button>
+                </div>
                 <svg id="liveMapSVG" class="live-map-svg" viewBox="0 0 1200 1200">
                     <!-- Background will be inserted here -->
                     <g id="liveFlightPaths"></g>
@@ -1822,28 +1861,29 @@
             const zoomableContent = document.getElementById('zoomableContent');
             if (!zoomableContent) return;
 
-            // Mouse wheel zoom - fixed to zoom on content, not screen
+            // Mouse wheel zoom - improved smooth behavior
             zoomableContent.addEventListener('wheel', function(e) {
                 e.preventDefault();
 
-                // Get the content's actual dimensions and position
-                const contentRect = zoomableContent.getBoundingClientRect();
-                const containerRect = zoomableContent.parentElement.getBoundingClientRect();
+                const rect = zoomableContent.getBoundingClientRect();
+                
+                // Get mouse position relative to the content center
+                const mouseX = e.clientX - rect.left - rect.width / 2;
+                const mouseY = e.clientY - rect.top - rect.height / 2;
 
-                // Calculate mouse position relative to the content
-                const mouseX = (e.clientX - contentRect.left) / currentZoom;
-                const mouseY = (e.clientY - contentRect.top) / currentZoom;
+                // Smooth zoom factor
+                const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+                const newZoom = Math.max(0.1, Math.min(currentZoom * zoomFactor, 15));
 
-                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9; // Fixed zoom direction
-                const newZoom = Math.max(0.1, Math.min(currentZoom * zoomFactor, 10));
+                if (newZoom !== currentZoom) {
+                    // Calculate zoom adjustment to keep mouse position stable
+                    const zoomRatio = newZoom / currentZoom;
+                    panX = panX * zoomRatio + mouseX * (1 - zoomRatio) / newZoom;
+                    panY = panY * zoomRatio + mouseY * (1 - zoomRatio) / newZoom;
 
-                // Calculate new pan to keep mouse position stable
-                const zoomChange = newZoom / currentZoom;
-                panX = panX * zoomChange + mouseX * (currentZoom - newZoom);
-                panY = panY * zoomChange + mouseY * (currentZoom - newZoom);
-
-                currentZoom = newZoom;
-                updateTransform();
+                    currentZoom = newZoom;
+                    updateTransform();
+                }
             });
 
             // Mouse drag pan
@@ -1892,6 +1932,7 @@
         let liveMapLastX = 0;
         let liveMapLastY = 0;
         let liveMapUpdateInterval = null;
+        let zoomTransitionTimeout = null;
 
         function openLiveMap() {
             const liveMapOverlay = document.getElementById('liveMapOverlay');
@@ -1997,29 +2038,46 @@
                 mouseCoordinates.style.top = (e.clientY - 30) + 'px';
             });
 
-            // Zoom with mouse wheel - fixed zoom behavior
+            // Zoom with mouse wheel - improved smooth behavior
             liveMapSVG.addEventListener('wheel', function(e) {
                 e.preventDefault();
 
+                // Clear any pending zoom transition
+                if (zoomTransitionTimeout) {
+                    clearTimeout(zoomTransitionTimeout);
+                }
+
                 const rect = liveMapSVG.getBoundingClientRect();
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
+                
+                // Get mouse position relative to SVG
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Calculate mouse position in SVG coordinates
+                const svgMouseX = (mouseX / rect.width) * 1200;
+                const svgMouseY = (mouseY / rect.height) * 1200;
 
-                // Get mouse position relative to center
-                const mouseX = e.clientX - rect.left - centerX;
-                const mouseY = e.clientY - rect.top - centerY;
+                // Smooth zoom factor
+                const zoomFactor = e.deltaY > 0 ? 0.85 : 1.15;
+                const newZoom = Math.max(0.2, Math.min(liveMapZoom * zoomFactor, 8));
 
-                // Zoom factor (reversed direction for natural feel)
-                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-                const newZoom = Math.max(0.3, Math.min(liveMapZoom * zoomFactor, 5));
+                if (newZoom !== liveMapZoom) {
+                    // Calculate zoom center offset
+                    const zoomCenterX = svgMouseX - 600; // Relative to center
+                    const zoomCenterY = svgMouseY - 600;
+                    
+                    // Adjust pan to keep mouse position stable
+                    const zoomRatio = newZoom / liveMapZoom;
+                    liveMapPanX = liveMapPanX * zoomRatio - zoomCenterX * (zoomRatio - 1);
+                    liveMapPanY = liveMapPanY * zoomRatio - zoomCenterY * (zoomRatio - 1);
 
-                // Adjust pan to zoom towards mouse
-                const zoomChange = newZoom / liveMapZoom;
-                liveMapPanX = liveMapPanX * zoomChange + mouseX * (1 - zoomChange) / newZoom;
-                liveMapPanY = liveMapPanY * zoomChange + mouseY * (1 - zoomChange) / newZoom;
-
-                liveMapZoom = newZoom;
-                updateLiveMapTransform();
+                    liveMapZoom = newZoom;
+                    
+                    // Smooth transition
+                    zoomTransitionTimeout = setTimeout(() => {
+                        updateLiveMapTransform();
+                    }, 10);
+                }
             });
 
             // Pan with mouse drag
@@ -2074,6 +2132,23 @@
             liveMapSVG.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`);
         }
 
+        function liveMapZoomIn() {
+            liveMapZoom = Math.min(liveMapZoom * 1.3, 8);
+            updateLiveMapTransform();
+        }
+
+        function liveMapZoomOut() {
+            liveMapZoom = Math.max(liveMapZoom / 1.3, 0.2);
+            updateLiveMapTransform();
+        }
+
+        function liveMapResetZoom() {
+            liveMapZoom = 1;
+            liveMapPanX = 0;
+            liveMapPanY = 0;
+            updateLiveMapTransform();
+        }
+
         function updateLiveMapFlights() {
             if (!liveAircraftData || Object.keys(liveAircraftData).length === 0) {
                 return;
@@ -2088,45 +2163,23 @@
             liveFlightPaths.innerHTML = '';
             liveAircraftMarkers.innerHTML = '';
 
+            // Add airport markers first
+            addAirportMarkersToLiveMap();
+
             // Get all aircraft
             const aircraftList = Object.keys(liveAircraftData);
             let validAircraftCount = 0;
             const usedPositions = new Set();
 
-            // Debug info to help calibrate coordinates
-            const debugInfo = [];
-
-            // Calculate dynamic bounds from actual aircraft data
-            let minX = Infinity, maxX = -Infinity;
-            let minY = Infinity, maxY = -Infinity;
-
-            // First pass: find actual bounds of current aircraft
-            aircraftList.forEach(callsign => {
-                const aircraftData = liveAircraftData[callsign];
-                if (aircraftData && aircraftData.position) {
-                    minX = Math.min(minX, aircraftData.position.x);
-                    maxX = Math.max(maxX, aircraftData.position.x);
-                    minY = Math.min(minY, aircraftData.position.y);
-                    maxY = Math.max(maxY, aircraftData.position.y);
-                }
-            });
-
-            // Add padding to bounds (20% on each side)
-            const xRange = maxX - minX;
-            const yRange = maxY - minY;
-            const xPadding = Math.max(xRange * 0.2, 5000); // Minimum 5000 units padding
-            const yPadding = Math.max(yRange * 0.2, 5000);
-
-            const boundedMinX = minX - xPadding;
-            const boundedMaxX = maxX + xPadding;
-            const boundedMinY = minY - yPadding;
-            const boundedMaxY = maxY + yPadding;
-
-            console.log(`📊 Dynamic PTFS Ranges: X(${Math.round(boundedMinX)} to ${Math.round(boundedMaxX)}), Y(${Math.round(boundedMinY)} to ${Math.round(boundedMaxY)})`);
+            // Use fixed coordinate bounds that match the game world better
+            const FIXED_BOUNDS = {
+                minX: -70000, maxX: 70000,  // Expanded range
+                minY: -40000, maxY: 70000   // Expanded range
+            };
 
             const mapWidth = 1200;
             const mapHeight = 1200;
-            const mapPadding = 100; // Keep aircraft away from edges
+            const mapPadding = 50; // Reduced padding for better use of space
 
             aircraftList.forEach(callsign => {
                 const aircraftData = liveAircraftData[callsign];
@@ -2137,11 +2190,11 @@
                 const ptfsX = aircraftData.position.x;
                 const ptfsY = aircraftData.position.y;
 
-                // Convert PTFS coordinates to map coordinates using dynamic bounds
-                const normalizedX = (ptfsX - boundedMinX) / (boundedMaxX - boundedMinX);
-                const normalizedY = (ptfsY - boundedMinY) / (boundedMaxY - boundedMinY);
+                // Convert PTFS coordinates to map coordinates using fixed bounds
+                const normalizedX = (ptfsX - FIXED_BOUNDS.minX) / (FIXED_BOUNDS.maxX - FIXED_BOUNDS.minX);
+                const normalizedY = (ptfsY - FIXED_BOUNDS.minY) / (FIXED_BOUNDS.maxY - FIXED_BOUNDS.minY);
                 
-                // Map to full map area with padding
+                // Map to map area with padding
                 let mapX = mapPadding + (normalizedX * (mapWidth - 2 * mapPadding));
                 let mapY = mapPadding + (normalizedY * (mapHeight - 2 * mapPadding));
                 
@@ -2149,46 +2202,46 @@
                 mapX = Math.max(mapPadding, Math.min(mapWidth - mapPadding, mapX));
                 mapY = Math.max(mapPadding, Math.min(mapHeight - mapPadding, mapY));
 
-                // Store debug info
-                debugInfo.push({
-                    callsign,
-                    ptfs: { x: ptfsX, y: ptfsY },
-                    direct_conversion: { x: ptfsX / 100, y: ptfsY / 100 },
-                    svg: { x: Math.round(mapX), y: Math.round(mapY) }
-                });
-
-                // Handle position conflicts
-                const posKey = `${Math.round(mapX/30)}_${Math.round(mapY/30)}`;
+                // Handle position conflicts with smaller grid
+                const posKey = `${Math.round(mapX/20)}_${Math.round(mapY/20)}`;
                 let offset = 0;
                 while (usedPositions.has(`${posKey}_${offset}`)) {
-                    offset += 15;
-                    if (offset > 45) break;
+                    offset += 10;
+                    if (offset > 30) break;
                 }
                 usedPositions.add(`${posKey}_${offset}`);
 
-                const finalX = mapX + (offset % 30) - 15;
-                const finalY = mapY + Math.floor(offset / 30) * 15;
+                const finalX = mapX + (offset % 20) - 10;
+                const finalY = mapY + Math.floor(offset / 20) * 10;
 
-                // Create aircraft marker
+                // Create aircraft marker with pulsing animation
                 const aircraftMarker = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 aircraftMarker.setAttribute('id', `aircraft_${callsign}`);
 
-                // Aircraft circle with better visibility
+                // Aircraft circle with pulsing animation
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 circle.setAttribute('cx', finalX);
                 circle.setAttribute('cy', finalY);
-                circle.setAttribute('r', '8');
-                circle.setAttribute('fill', '#ffff00');
-                circle.setAttribute('stroke', '#000');
+                circle.setAttribute('r', '6');
+                circle.setAttribute('fill', '#00ff00');
+                circle.setAttribute('stroke', '#fff');
                 circle.setAttribute('stroke-width', '2');
+                
+                // Add pulsing animation
+                const animate = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+                animate.setAttribute('attributeName', 'r');
+                animate.setAttribute('values', '6;10;6');
+                animate.setAttribute('dur', '2s');
+                animate.setAttribute('repeatCount', 'indefinite');
+                circle.appendChild(animate);
 
-                // Callsign text
+                // Callsign text with better contrast
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 text.setAttribute('x', finalX);
                 text.setAttribute('y', finalY - 15);
                 text.setAttribute('text-anchor', 'middle');
-                text.setAttribute('fill', '#ffff00');
-                text.setAttribute('font-size', '12');
+                text.setAttribute('fill', '#00ff00');
+                text.setAttribute('font-size', '11');
                 text.setAttribute('font-weight', 'bold');
                 text.setAttribute('stroke', '#000');
                 text.setAttribute('stroke-width', '1');
@@ -2197,13 +2250,13 @@
                 // Aircraft data tooltip
                 const infoText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 infoText.setAttribute('x', finalX);
-                infoText.setAttribute('y', finalY + 25);
+                infoText.setAttribute('y', finalY + 20);
                 infoText.setAttribute('text-anchor', 'middle');
                 infoText.setAttribute('fill', '#ccc');
-                infoText.setAttribute('font-size', '10');
+                infoText.setAttribute('font-size', '9');
                 infoText.setAttribute('stroke', '#000');
                 infoText.setAttribute('stroke-width', '0.5');
-                infoText.textContent = `${aircraftData.altitude}ft • ${Math.round(aircraftData.groundSpeed)}kts`;
+                infoText.textContent = `${aircraftData.altitude || 0}ft • ${Math.round(aircraftData.groundSpeed || 0)}kts`;
 
                 aircraftMarker.appendChild(circle);
                 aircraftMarker.appendChild(text);
@@ -2211,28 +2264,82 @@
                 liveAircraftMarkers.appendChild(aircraftMarker);
             });
 
-            // Add status info
+            // Add status info with better positioning
             if (validAircraftCount > 0) {
                 const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 statusText.setAttribute('x', '20');
-                statusText.setAttribute('y', '30');
+                statusText.setAttribute('y', '25');
                 statusText.setAttribute('fill', '#50c878');
-                statusText.setAttribute('font-size', '16');
+                statusText.setAttribute('font-size', '14');
                 statusText.setAttribute('font-weight', 'bold');
                 statusText.setAttribute('stroke', '#000');
                 statusText.setAttribute('stroke-width', '1');
-                statusText.textContent = `${validAircraftCount} Active Aircraft - Dynamic Scaling`;
+                statusText.textContent = `✈️ ${validAircraftCount} Live Aircraft`;
                 liveAircraftMarkers.appendChild(statusText);
 
-                // Log debug info
-                console.log('📍 All aircraft positions:', debugInfo);
-                if (debugInfo.length > 0) {
-                    console.log('🛩️ Fixed coordinate conversion:', debugInfo[0]);
-                    console.log('📍 Sample aircraft positions:', debugInfo.slice(0, 3));
-                }
+                console.log(`📍 Tracking ${validAircraftCount} aircraft on live map`);
             }
 
             updateLiveMapTransform();
+        }
+
+        function addAirportMarkersToLiveMap() {
+            const liveAircraftMarkers = document.getElementById('liveAircraftMarkers');
+            if (!liveAircraftMarkers) return;
+
+            // Use same coordinate conversion as aircraft
+            const FIXED_BOUNDS = {
+                minX: -70000, maxX: 70000,
+                minY: -40000, maxY: 70000
+            };
+
+            const mapWidth = 1200;
+            const mapHeight = 1200;
+            const mapPadding = 50;
+
+            // Add airport markers
+            Object.keys(AIRPORT_COORDINATES).forEach(airportCode => {
+                const airport = AIRPORT_COORDINATES[airportCode];
+                
+                // Convert airport PTFS coordinates to map coordinates
+                const normalizedX = (airport.x - FIXED_BOUNDS.minX) / (FIXED_BOUNDS.maxX - FIXED_BOUNDS.minX);
+                const normalizedY = (airport.z - FIXED_BOUNDS.minY) / (FIXED_BOUNDS.maxY - FIXED_BOUNDS.minY);
+                
+                const mapX = mapPadding + (normalizedX * (mapWidth - 2 * mapPadding));
+                const mapY = mapPadding + (normalizedY * (mapHeight - 2 * mapPadding));
+
+                // Check if airport is within visible bounds
+                if (mapX >= mapPadding && mapX <= mapWidth - mapPadding && 
+                    mapY >= mapPadding && mapY <= mapHeight - mapPadding) {
+                    
+                    const airportMarker = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    
+                    // Airport circle
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', mapX);
+                    circle.setAttribute('cy', mapY);
+                    circle.setAttribute('r', '4');
+                    circle.setAttribute('fill', '#ff6b35');
+                    circle.setAttribute('stroke', '#fff');
+                    circle.setAttribute('stroke-width', '1');
+                    
+                    // Airport code text
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', mapX);
+                    text.setAttribute('y', mapY - 8);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('fill', '#ff6b35');
+                    text.setAttribute('font-size', '9');
+                    text.setAttribute('font-weight', 'bold');
+                    text.setAttribute('stroke', '#000');
+                    text.setAttribute('stroke-width', '0.5');
+                    text.textContent = airportCode;
+                    
+                    airportMarker.appendChild(circle);
+                    airportMarker.appendChild(text);
+                    liveAircraftMarkers.appendChild(airportMarker);
+                }
+            });
         }
 
         function zoomIn() {
