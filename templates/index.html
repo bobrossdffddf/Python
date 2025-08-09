@@ -1485,27 +1485,22 @@
             const currentAircraftData = liveAircraftData[trackingCallsign];
             if (!currentAircraftData || !currentAircraftData.position) return;
 
-            // Use same coordinate conversion as live map
-            const PTFS_WORLD_BOUNDS = {
-                minX: -50000, maxX: 50000,
-                minY: -40000, maxY: 40000
-            };
-
-            const mapWidth = 1200;
-            const mapHeight = 1200;
-            const mapCenterX = mapWidth / 2;
-            const mapCenterY = mapHeight / 2;
-            const mapScale = 400; // Same scale as live map
-            
+            // Use same coordinate conversion as airports and live map
             const ptfsX = currentAircraftData.position.x;
             const ptfsY = currentAircraftData.position.y;
             
-            // Convert PTFS coordinates to map coordinates using same system as live map
-            const normalizedX = (ptfsX - PTFS_WORLD_BOUNDS.minX) / (PTFS_WORLD_BOUNDS.maxX - PTFS_WORLD_BOUNDS.minX);
-            const normalizedY = (ptfsY - PTFS_WORLD_BOUNDS.minY) / (PTFS_WORLD_BOUNDS.maxY - PTFS_WORLD_BOUNDS.minY);
-            
-            let mapX = mapCenterX + ((normalizedX - 0.5) * mapScale);
-            let mapY = mapCenterY + ((normalizedY - 0.5) * mapScale);
+            const mapWidth = 1200;
+            const mapHeight = 1200;
+            const mapCenterX = 600;
+            const mapCenterY = 600;
+            const ptfsXRange = 2750;
+            const ptfsYRange = 2760;
+            const mapScale = 900;
+
+            const depNormX = (ptfsX + 3200) / ptfsXRange;
+            const depNormY = (ptfsY - 1340) / ptfsYRange;
+            let mapX = (mapCenterX - mapScale/2) + (depNormX * mapScale);
+            let mapY = (mapCenterY - mapScale/2) + (depNormY * mapScale);
             
             // Ensure within bounds
             mapX = Math.max(50, Math.min(1150, mapX));
@@ -2211,7 +2206,7 @@
             const existingAircraft = liveAircraftMarkers.querySelectorAll('.aircraft-marker');
             existingAircraft.forEach(marker => marker.remove());
 
-            // Get all aircraft and use SIMPLE coordinate conversion
+            // Get all aircraft and use PROPER coordinate conversion
             const aircraftList = Object.keys(liveAircraftData);
             let validAircraftCount = 0;
 
@@ -2224,9 +2219,19 @@
                 const ptfsX = aircraftData.position.x;
                 const ptfsY = aircraftData.position.y;
 
-                // SIMPLE conversion: divide by 100 and center on map
-                let mapX = 600 + (ptfsX / 100);
-                let mapY = 600 + (ptfsY / 100);
+                // Use same conversion as in route map - convert PTFS to SVG coordinates
+                const mapWidth = 1200;
+                const mapHeight = 1200;
+                const mapCenterX = 600;
+                const mapCenterY = 600;
+                const ptfsXRange = 2750;
+                const ptfsYRange = 2760;
+                const mapScale = 900;
+
+                const depNormX = (ptfsX + 3200) / ptfsXRange;
+                const depNormY = (ptfsY - 1340) / ptfsYRange;
+                let mapX = (mapCenterX - mapScale/2) + (depNormX * mapScale);
+                let mapY = (mapCenterY - mapScale/2) + (depNormY * mapScale);
                 
                 // Keep aircraft within map bounds
                 mapX = Math.max(50, Math.min(1150, mapX));

@@ -177,13 +177,17 @@ def get_flights():
         # Handle filtering logic - only show clearances for departing flights
         if current_airport_filter:
             if flight["arriving"] == current_airport_filter:
-                flight_copy.pop("clearance", None)  # Remove clearance for arriving flights
+                # This flight is arriving to the filtered airport
+                if "clearance" in flight_copy:
+                    del flight_copy["clearance"]  # Remove clearance for arriving flights
                 flight_copy["is_arriving_to_filter"] = True  # Mark for yellow styling
             elif flight["departing"] == current_airport_filter:
+                # This flight is departing from the filtered airport
                 flight_copy["is_arriving_to_filter"] = False
             else:
                 continue  # Skip flights not related to filtered airport
         else:
+            # No filter applied
             flight_copy["is_arriving_to_filter"] = False
 
         flights_to_return.append(flight_copy)
