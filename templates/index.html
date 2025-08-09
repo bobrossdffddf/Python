@@ -977,17 +977,8 @@
                 const distanceStuds = Math.sqrt(dx*dx + dy*dy);
                 const distanceNM = distanceStuds / 3307.14286;
 
-                const avgFuelBurn = 25; // gallons per hour
-                const avgSpeed = 300; // knots
-                const flightTime = distanceNM / avgSpeed;
-                const fuelNeeded = flightTime * avgFuelBurn;
-                const fuelWithReserve = fuelNeeded * 1.45; // 45% reserve
-
                 analysis += `Distance: ${Math.round(distanceNM)} NM\n`;
-                analysis += `Flight Time: ${Math.round(flightTime * 60)} minutes\n`;
-                analysis += `Base Fuel Required: ${Math.round(fuelNeeded)} gallons\n`;
-                analysis += `With Reserve (45%): ${Math.round(fuelWithReserve)} gallons\n`;
-                analysis += `Fuel per NM: ${(fuelNeeded / distanceNM).toFixed(2)} gal/NM`;
+                analysis += `Flight Time: ${Math.round((distanceNM / 300) * 60)} minutes (estimated at 300 kts)`;
             } else {
                 analysis += 'Distance calculation unavailable - unknown airports';
             }
@@ -998,66 +989,59 @@
         function calculateWeight() {
             if (!currentFlightData) return;
             const display = document.getElementById('analysisDisplay');
-
-            display.textContent = `WEIGHT & BALANCE ANALYSIS\nFlight: ${currentFlightData.callsign}\nAircraft: ${currentFlightData.aircraft}\n\nEstimated weights based on aircraft type:\n• Empty Weight: 45,000 lbs\n• Max Takeoff: 78,000 lbs\n• Payload: 15,000 lbs\n• Fuel Capacity: 18,000 lbs\n\nBalance within acceptable CG limits\nTakeoff performance: NORMAL\nLanding performance: NORMAL`;
+            display.textContent = `WEIGHT & BALANCE ANALYSIS\nFlight: ${currentFlightData.callsign}\nAircraft: ${currentFlightData.aircraft}\n\nReal weight and balance data not available.`;
         }
 
         function performanceAnalysis() {
             if (!currentFlightData) return;
             const display = document.getElementById('analysisDisplay');
-
-            display.textContent = `PERFORMANCE ANALYSIS\nFlight: ${currentFlightData.callsign}\nCruise Level: FL${currentFlightData.flightlevel}\n\nOptimal cruise altitude: FL${currentFlightData.flightlevel}\nExpected cruise speed: 300 kts\nFuel efficiency: OPTIMAL\nClimb performance: NORMAL\nService ceiling: 41,000 ft\n\nRecommendations:\n• Maintain current flight level\n• Monitor fuel consumption\n• Request higher altitude if available`;
+            display.textContent = `PERFORMANCE ANALYSIS\nFlight: ${currentFlightData.callsign}\nCruise Level: FL${currentFlightData.flightlevel}\n\nReal performance data not available.`;
         }
 
         function routeOptimization() {
             if (!currentFlightData) return;
             const display = document.getElementById('analysisDisplay');
-
-            display.textContent = `ROUTE OPTIMIZATION\nCurrent Route: ${currentFlightData.route || 'Direct'}\nDeparture: ${currentFlightData.departing}\nDestination: ${currentFlightData.arriving}\n\nRoute Analysis:\n• Current route is optimal\n• No significant weather deviations needed\n• Estimated time savings: 0 minutes\n• Fuel savings: 0%\n\nAlternate routes available:\n• Northern route (+5 min)\n• Southern route (+3 min)\n• Current route: RECOMMENDED`;
+            display.textContent = `ROUTE OPTIMIZATION\nCurrent Route: ${currentFlightData.route || 'Direct'}\nDeparture: ${currentFlightData.departing}\nDestination: ${currentFlightData.arriving}\n\nRoute optimization data not available.`;
         }
 
         function getWeatherData() {
-            if (!currentFlightData) return;
             const display = document.getElementById('weatherDisplay');
-
-            display.textContent = `WEATHER REPORT\nGenerated: ${new Date().toLocaleTimeString()}\n\n${currentFlightData.departing} (Departure):\nWind: 090/15 kts\nVisibility: 10+ SM\nCeiling: Unlimited\nTemperature: 22°C\nDew Point: 18°C\nAltimeter: 30.12\n\n${currentFlightData.arriving} (Arrival):\nWind: 120/12 kts\nVisibility: 8 SM\nCeiling: 3500 ft\nTemperature: 19°C\nDew Point: 15°C\nAltimeter: 29.98`;
+            display.textContent = `WEATHER REPORT\nReal weather data not available.\nConnect to external weather service for live data.`;
         }
 
         function getWindsAloft() {
-            if (!currentFlightData) return;
             const display = document.getElementById('weatherDisplay');
-
-            display.textContent = `WINDS ALOFT FORECAST\nRoute: ${currentFlightData.departing} → ${currentFlightData.arriving}\nValid: ${new Date().toLocaleDateString()}\n\nFL200: 270/25 kts\nFL250: 280/35 kts\nFL300: 290/45 kts\nFL350: 300/55 kts\nFL400: 310/65 kts\n\nCurrent Level FL${currentFlightData.flightlevel}:\nWind: 285/40 kts\nTemperature: -28°C\nTurbulence: Light\nIcing: None`;
+            display.textContent = `WINDS ALOFT FORECAST\nReal winds aloft data not available.\nConnect to external weather service for live data.`;
         }
 
         function getTurbulenceReport() {
             const display = document.getElementById('weatherDisplay');
-            display.textContent = `TURBULENCE REPORT\nRoute Analysis\nUpdated: ${new Date().toLocaleTimeString()}\n\nCurrent Conditions:\n• Light turbulence FL200-FL250\n• Smooth conditions FL300+\n• Mountain wave activity: None\n• Convective activity: Isolated\n\nPilot Reports (PIREPs):\n• FL240: Light chop (A320)\n• FL350: Smooth (B777)\n• FL280: Occasional light (A330)\n\nRecommended altitude: FL${currentFlightData?.flightlevel || '350'}`;
+            display.textContent = `TURBULENCE REPORT\nReal turbulence data not available.\nConnect to external weather service for live data.`;
         }
 
         function getVisibility() {
             const display = document.getElementById('weatherDisplay');
-            display.textContent = `VISIBILITY CONDITIONS\nCurrent Observations\n\n${currentFlightData?.departing || 'DEPARTURE'}:\n• Visibility: 10+ statute miles\n• Flight visibility: Unlimited\n• Conditions: Clear\n• Restrictions: None\n\nEN ROUTE:\n• General visibility: 6-10 SM\n• Haze layers: FL180-FL220\n• Clouds: Scattered FL250\n\n${currentFlightData?.arriving || 'ARRIVAL'}:\n• Visibility: 8 statute miles\n• Approach visibility: 6 SM\n• Restrictions: Light haze\n• Minimums: CAT I ILS available`;
+            display.textContent = `VISIBILITY CONDITIONS\nReal visibility data not available.\nConnect to external weather service for live data.`;
         }
 
         function getNavAids() {
             const display = document.getElementById('navDisplay');
-            display.textContent = `NAVIGATION AIDS\nRoute: ${currentFlightData?.departing || 'DEP'} → ${currentFlightData?.arriving || 'ARR'}\n\nVOR/DME Stations:\n• ${currentFlightData?.departing || 'DEP'} VOR: 115.90\n• Intermediate: 116.30\n• ${currentFlightData?.arriving || 'ARR'} VOR: 117.20\n\nILS Approaches Available:\n• Runway 09L: 110.10\n• Runway 27R: 111.50\n\nGPS/RNAV:\n• WAAS available\n• RNP 0.30 capable\n• LPV approaches available\n\nTACAN: Available\nNDB: Backup navigation`;
+            display.textContent = `NAVIGATION AIDS\nReal navigation aid data not available.\nConnect to external navigation database for live data.`;
         }
 
         function getFrequencies() {
             const display = document.getElementById('navDisplay');
-            display.textContent = `ATC FREQUENCIES\nFlight: ${currentFlightData?.callsign || 'N/A'}\n\n${currentFlightData?.departing || 'DEPARTURE'} Control:\n• Ground: 121.90\n• Tower: 119.70\n• Departure: 125.30\n• Approach: 124.10\n\nEN ROUTE:\n• Center (Low): 128.50\n• Center (High): 132.30\n• Emergency: 121.50\n\n${currentFlightData?.arriving || 'ARRIVAL'} Control:\n• Approach: 123.80\n• Tower: 118.30\n• Ground: 121.70\n\nOther:\n• ATIS: 127.25\n• Unicom: 122.80`;
+            display.textContent = `ATC FREQUENCIES\nReal frequency data not available.\nConnect to external aviation database for live data.`;
         }
 
         function getNotams() {
             const display = document.getElementById('navDisplay');
-            display.textContent = `NOTICES TO AIRMEN (NOTAMs)\nEffective: ${new Date().toLocaleDateString()}\n\n${currentFlightData?.departing || 'DEPARTURE'}:\n• Runway 09L/27R: Available\n• ILS Runway 09L: Normal operation\n• Taxiway Alpha: Closed 0800-1600Z\n• Fuel services: Available H24\n\n${currentFlightData?.arriving || 'ARRIVAL'}:\n• All runways operational\n• Approach lighting: Normal\n• PAPI lights: In service\n• Construction: None affecting ops\n\nAIRSPACE:\n• No TFRs along route\n• Military exercises: None\n• Weather deviations: None expected`;
+            display.textContent = `NOTICES TO AIRMEN (NOTAMs)\nReal NOTAM data not available.\nConnect to external NOTAM service for live data.`;
         }
 
         function getAirspaceInfo() {
             const display = document.getElementById('navDisplay');
-            display.textContent = `AIRSPACE INFORMATION\nRoute Analysis\n\nCurrent Airspace:\n• Class B: ${currentFlightData?.departing || 'DEP'} (Surface to FL180)\n• Class A: En route (FL180-FL600)\n• Class B: ${currentFlightData?.arriving || 'ARR'} (Surface to FL180)\n\nSpecial Use Airspace:\n• Restricted areas: None affecting route\n• Military operations: None\n• Prohibited areas: None\n\nTransition Requirements:\n• Transponder: Mode C required\n• ADS-B: Required above FL180\n• RVSM: Approved aircraft required FL290+\n\nMinimum Safe Altitudes:\n• MEA: 3000 ft\n• MOCA: 2400 ft\n• Grid MORA: 3200 ft`;
+            display.textContent = `AIRSPACE INFORMATION\nReal airspace data not available.\nConnect to external airspace database for live data.`;
         }
 
         function calculateETA() {
@@ -1076,50 +1060,58 @@
                 const distanceStuds = Math.sqrt(dx*dx + dy*dy);
                 const distanceNM = distanceStuds / 3307.14286;
 
-                const groundSpeed = 300; // knots
+                const groundSpeed = 300; // estimated knots
                 const flightTimeHours = distanceNM / groundSpeed;
                 const now = new Date();
                 const eta = new Date(now.getTime() + (flightTimeHours * 60 * 60 * 1000));
 
                 etaInfo += `Distance: ${Math.round(distanceNM)} NM\n`;
-                etaInfo += `Ground Speed: ${groundSpeed} kts\n`;
+                etaInfo += `Estimated Speed: ${groundSpeed} kts\n`;
                 etaInfo += `Flight Time: ${Math.round(flightTimeHours * 60)} minutes\n`;
-                etaInfo += `Departure: ${now.toLocaleTimeString()}\n`;
-                etaInfo += `Estimated Arrival: ${eta.toLocaleTimeString()}\n\n`;
-                etaInfo += `Note: Add taxi and approach time`;
+                etaInfo += `Current Time: ${now.toLocaleTimeString()}\n`;
+                etaInfo += `Estimated Arrival: ${eta.toLocaleTimeString()}`;
             } else {
-                etaInfo += 'ETA calculation unavailable\nUnknown airport coordinates';
+                etaInfo += 'ETA calculation unavailable - unknown airport coordinates';
             }
 
             display.textContent = etaInfo;
         }
 
         function calculateDistance() {
+            if (!currentFlightData) return;
             const display = document.getElementById('timeDisplay');
-            display.textContent = `DISTANCE CALCULATOR\nRoute: ${currentFlightData?.departing || 'N/A'} → ${currentFlightData?.arriving || 'N/A'}\n\nGreat Circle Distance: 450 NM\nFlight Plan Distance: 465 NM\nDifference: 15 NM (3.3%)\n\nSegment Distances:\n• Departure to waypoint 1: 85 NM\n• Waypoint 1 to waypoint 2: 120 NM\n• Waypoint 2 to waypoint 3: 180 NM\n• Waypoint 3 to arrival: 80 NM\n\nTotal route: 465 NM\nFuel planning distance: 480 NM (with reserves)`;
+            const departure = currentFlightData.departing;
+            const arrival = currentFlightData.arriving;
+            
+            if (AIRPORT_COORDINATES[departure] && AIRPORT_COORDINATES[arrival]) {
+                const depCoords = AIRPORT_COORDINATES[departure];
+                const arrCoords = AIRPORT_COORDINATES[arrival];
+                const dx = arrCoords.x - depCoords.x;
+                const dy = arrCoords.z - depCoords.z;
+                const distanceStuds = Math.sqrt(dx*dx + dy*dy);
+                const distanceNM = distanceStuds / 3307.14286;
+
+                display.textContent = `DISTANCE CALCULATOR\nRoute: ${departure} → ${arrival}\n\nGreat Circle Distance: ${Math.round(distanceNM)} NM\n\nNote: This is direct distance calculation based on PTFS coordinates.`;
+            } else {
+                display.textContent = `DISTANCE CALCULATOR\nRoute: ${departure} → ${arrival}\n\nDistance calculation unavailable - unknown airport coordinates`;
+            }
         }
 
         function getTimezones() {
             const display = document.getElementById('timeDisplay');
-            display.textContent = `TIMEZONE INFORMATION\nFlight Planning Reference\n\nDeparture Airport (${currentFlightData?.departing || 'N/A'}):\n• Local Time: ${new Date().toLocaleTimeString()}\n• UTC Offset: -5:00\n• Timezone: EST\n\nArrival Airport (${currentFlightData?.arriving || 'N/A'}):\n• Local Time: ${new Date().toLocaleTimeString()}\n• UTC Offset: -3:00\n• Timezone: AST\n\nFlight Planning:\n• Use UTC for all calculations\n• Time difference: 2 hours\n• Daylight saving: Consider seasonal changes\n• Crew duty time: Monitor local times`;
+            display.textContent = `TIMEZONE INFORMATION\nReal timezone data not available.\nConnect to external timezone service for live data.`;
         }
 
         function getSunriseSunset() {
             const display = document.getElementById('timeDisplay');
-            const today = new Date();
-            const sunrise = new Date(today);
-            const sunset = new Date(today);
-            sunrise.setHours(6, 30, 0);
-            sunset.setHours(18, 45, 0);
-
-            display.textContent = `SUNRISE/SUNSET DATA\nDate: ${today.toLocaleDateString()}\n\nDeparture Airport:\n• Sunrise: ${sunrise.toLocaleTimeString()}\n• Sunset: ${sunset.toLocaleTimeString()}\n• Civil twilight begins: 06:00\n• Civil twilight ends: 19:15\n\nArrival Airport:\n• Sunrise: 06:45 local\n• Sunset: 19:00 local\n• Civil twilight begins: 06:15\n• Civil twilight ends: 19:30\n\nFlight Conditions:\n• Departure: Daylight\n• Arrival: Daylight\n• Night currency: Not required`;
+            display.textContent = `SUNRISE/SUNSET DATA\nReal sunrise/sunset data not available.\nConnect to external astronomical service for live data.`;
         }
 
         function generateFlightPlan() {
             if (!currentFlightData) return;
             const display = document.getElementById('docDisplay');
 
-            const flightPlan = `FLIGHT PLAN DOCUMENT\nGenerated: ${new Date().toLocaleString()}\n\nAircraft Information:\nCallsign: ${currentFlightData.callsign}\nAircraft Type: ${currentFlightData.aircraft}\nFlight Rules: IFR\n\nRoute Information:\nDeparture: ${currentFlightData.departing}\nDestination: ${currentFlightData.arriving}\nRoute: ${currentFlightData.route || 'Direct'}\nCruise Altitude: FL${currentFlightData.flightlevel}\n\nFiling Information:\nFlight Time: Estimated 2h 30m\nFuel on Board: 4h 00m\nAlternate Airport: Available\nPilot Information: On file\n\nRemarks: Standard IFR flight\nEquipment: /G (GPS equipped)`;
+            const flightPlan = `FLIGHT PLAN DOCUMENT\nGenerated: ${new Date().toLocaleString()}\n\nAircraft Information:\nCallsign: ${currentFlightData.callsign}\nAircraft Type: ${currentFlightData.aircraft}\nFlight Rules: IFR\n\nRoute Information:\nDeparture: ${currentFlightData.departing}\nDestination: ${currentFlightData.arriving}\nRoute: ${currentFlightData.route || 'Direct'}\nCruise Altitude: FL${currentFlightData.flightlevel}`;
 
             display.textContent = flightPlan;
 
@@ -1138,21 +1130,22 @@
             const exportData = {
                 flight: currentFlightData,
                 timestamp: new Date().toISOString(),
-                tools_used: 'ATC Flight Monitor',
-                calculations: 'Generated automatically'
+                source: 'ATC Flight Monitor'
             };
 
             const jsonData = JSON.stringify(exportData, null, 2);
-            display.textContent = `DATA EXPORT\nFlight: ${currentFlightData.callsign}\n\nExport formats available:\n• JSON (recommended)\n• CSV\n• PDF report\n• Flight plan format\n\nData includes:\n• Flight details\n• Route information\n• Weather data\n• Performance calculations\n• Navigation aids\n• Frequencies\n\nClick to copy JSON data to clipboard...`;
+            display.textContent = `DATA EXPORT\nFlight: ${currentFlightData.callsign}\n\nJSON format:\n${jsonData}`;
 
-            navigator.clipboard.writeText(jsonData).catch(() => {
+            navigator.clipboard.writeText(jsonData).then(() => {
+                alert('Flight data copied to clipboard!');
+            }).catch(() => {
                 console.log('Clipboard access not available');
             });
         }
 
         function printChecklists() {
             const display = document.getElementById('docDisplay');
-            display.textContent = `FLIGHT CHECKLISTS\nAircraft: ${currentFlightData?.aircraft || 'Generic'}\n\nPre-flight Checklist:\n☐ Weather briefing complete\n☐ NOTAMs reviewed\n☐ Flight plan filed\n☐ Aircraft inspection complete\n☐ Fuel quantity verified\n☐ Weight & balance calculated\n\nPre-departure:\n☐ Clearance received\n☐ Transponder set\n☐ Navigation aids checked\n☐ Radios tuned\n☐ Departure frequency noted\n\nCruise:\n☐ Altitude verified\n☐ Navigation on track\n☐ Fuel flow normal\n☐ Weather updates received\n\nApproach:\n☐ Approach briefing complete\n☐ Landing clearance received\n☐ Configuration set`;
+            display.textContent = `FLIGHT CHECKLISTS\nGeneric checklist templates not available.\nUse aircraft-specific checklists for real operations.`;
         }
 
         function logbookEntry() {
@@ -1160,29 +1153,27 @@
             const display = document.getElementById('docDisplay');
             const today = new Date();
 
-            display.textContent = `LOGBOOK ENTRY\nDate: ${today.toLocaleDateString()}\n\nAircraft Information:\nAircraft Type: ${currentFlightData.aircraft}\nTail Number: [Enter tail number]\nFlight Time: 2.5 hours (estimated)\n\nRoute Information:\nDeparture: ${currentFlightData.departing}\nArrival: ${currentFlightData.arriving}\nRoute: ${currentFlightData.route || 'Direct'}\n\nFlight Conditions:\nInstrument Time: 2.5\nCross Country: Yes\nPIC Time: 2.5\nNight Time: 0.0\n\nApproaches: 1 ILS\nLandings: 1 Day\n\nRemarks: Normal IFR flight\nInstructor: N/A\nDual Received: 0.0`;
+            display.textContent = `LOGBOOK ENTRY TEMPLATE\nDate: ${today.toLocaleDateString()}\n\nAircraft Type: ${currentFlightData.aircraft}\nDeparture: ${currentFlightData.departing}\nArrival: ${currentFlightData.arriving}\nRoute: ${currentFlightData.route || 'Direct'}\n\nNote: Complete with actual flight time and conditions.`;
         }
 
         function emergencyProcedures() {
             const display = document.getElementById('emergencyDisplay');
-            display.textContent = `EMERGENCY PROCEDURES\nQuick Reference Guide\n\nAVIATE • NAVIGATE • COMMUNICATE\n\nEngine Failure:\n1. Maintain aircraft control\n2. Establish best glide speed\n3. Turn toward suitable landing area\n4. Declare emergency (7700)\n5. Attempt restart if altitude permits\n\nFire:\n1. Engine fire - Pull throttle, mixture\n2. Master switch OFF\n3. Fuel shut off\n4. Land immediately\n\nLost Communications:\n1. Squawk 7600\n2. Continue on filed flight plan\n3. Fly last assigned altitude\n4. Land at filed destination\n\nEmergency Frequencies:\n• 121.5 MHz (Guard)\n• 243.0 MHz (Military)`;
+            display.textContent = `EMERGENCY PROCEDURES\nReal emergency procedures not available.\nRefer to aircraft-specific emergency checklists and procedures.`;
         }
 
         function alternateAirports() {
-            if (!currentFlightData) return;
             const display = document.getElementById('emergencyDisplay');
-
-            display.textContent = `ALTERNATE AIRPORTS\nRoute: ${currentFlightData.departing} → ${currentFlightData.arriving}\n\nPrimary Alternates:\n• IBAR - 45 NM SE\n  Runway: 09/27 (8000 ft)\n  Services: Full\n  Weather: VFR\n\n• IHEN - 32 NM NW  \n  Runway: 18/36 (6500 ft)\n  Services: Fuel available\n  Weather: MVFR\n\n• IGRV - 28 NM N\n  Runway: 12/30 (7200 ft)\n  Services: Limited\n  Weather: VFR\n\nEmergency Fields:\n• IIAB - 15 NM E (Emergency only)\n• IJAF - 25 NM S (Military - emergency)\n\nDiversion Planning:\n• Fuel required: 45 minutes\n• Weather minimums: 800-2\n• Approach capabilities: ILS available`;
+            display.textContent = `ALTERNATE AIRPORTS\nReal alternate airport data not available.\nConnect to external aviation database for live airport information.`;
         }
 
         function fuelEmergency() {
             const display = document.getElementById('emergencyDisplay');
-            display.textContent = `FUEL EMERGENCY PROCEDURES\nCritical Action Items\n\nFUEL EMERGENCY DECLARED\nSquawk: 7700\nFrequency: 121.5 MHz\n\nImmediate Actions:\n1. Reduce power to minimum\n2. Lean mixture for best economy\n3. Request direct routing\n4. Consider lower altitude\n5. Brief passengers/crew\n\nCommunication:\n"MAYDAY MAYDAY MAYDAY\n[Callsign] FUEL EMERGENCY\n[Position] [Souls on Board]\nREQUEST IMMEDIATE VECTOR\nTO NEAREST SUITABLE AIRPORT"\n\nClosest Airports:\n• ${currentFlightData?.arriving || 'DEST'}: 45 NM\n• IBAR: 32 NM\n• IHEN: 28 NM\n\nEndurance: Calculate remaining fuel\nLanding Weight: Within limits\nEmergency Services: Request on standby`;
+            display.textContent = `FUEL EMERGENCY PROCEDURES\nReal emergency procedures not available.\nRefer to aircraft-specific emergency checklists and procedures.`;
         }
 
         function medicalEmergency() {
             const display = document.getElementById('emergencyDisplay');
-            display.textContent = `MEDICAL EMERGENCY\nCritical Response Procedures\n\nImmediate Actions:\n1. Ensure safety of flight\n2. Request priority handling\n3. Squawk 7700\n4. Contact ATC immediately\n\nCommunication:\n"PAN PAN PAN PAN PAN PAN\n[Callsign] MEDICAL EMERGENCY\n[Position] REQUEST PRIORITY\nLANDING [Destination]\n[Nature of Emergency]"\n\nMedical Assistance:\n• First aid kit: Available\n• AED: Check aircraft equipment\n• Ground medical: Request standby\n• Doctor on board: Announce\n\nDiversion Considerations:\n• Nearest hospital facility\n• Runway length requirements  \n• Ground transportation\n• Weather conditions\n\nLanding Preparation:\n• Brief cabin crew\n• Secure patient\n• Prepare for expedited taxi\n• Emergency services coordination`;
+            display.textContent = `MEDICAL EMERGENCY PROCEDURES\nReal emergency procedures not available.\nRefer to aircraft-specific emergency checklists and procedures.`;
         }
 
         async function setAirportFilter(airport) {
