@@ -477,13 +477,54 @@
         }
 
         .zoomable-content {
-            transition: transform 0.3s ease;
+            transition: transform 0.1s ease;
             transform-origin: center;
             width: 100%;
             height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
+            cursor: grab;
+        }
+        
+        .zoomable-content.dragging {
+            cursor: grabbing;
+        }
+        
+        .pan-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 100;
+        }
+        
+        .pan-row {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .pan-btn {
+            width: 35px;
+            height: 35px;
+            background: rgba(74, 144, 226, 0.9);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .pan-btn:hover {
+            background: rgba(74, 144, 226, 1);
+            transform: scale(1.1);
         }
 
         .clearance-section {
@@ -882,6 +923,20 @@
                     <button class="zoom-btn" onclick="zoomIn()">+</button>
                     <button class="zoom-btn" onclick="zoomOut()">−</button>
                     <button class="zoom-btn" onclick="resetZoom()">⌂</button>
+                    <button class="zoom-btn" onclick="toggleCoordinateHelper()" title="Toggle coordinate helper">📍</button>
+                </div>
+                <div class="pan-controls">
+                    <div class="pan-row">
+                        <button class="pan-btn" onclick="pan(0, -50)">↑</button>
+                    </div>
+                    <div class="pan-row">
+                        <button class="pan-btn" onclick="pan(-50, 0)">←</button>
+                        <button class="pan-btn" onclick="resetPan()">⌂</button>
+                        <button class="pan-btn" onclick="pan(50, 0)">→</button>
+                    </div>
+                    <div class="pan-row">
+                        <button class="pan-btn" onclick="pan(0, 50)">↓</button>
+                    </div>
                 </div>
                 <div class="zoomable-content" id="zoomableContent">
                     <!-- Map content will be inserted here -->
@@ -954,6 +1009,24 @@
             // Start polling for updates
             setInterval(updateData, 2000);
             updateData();
+            
+            // Global helper functions
+            window.exportAirportCoordinates = function() {
+                if (window.exportAirportCoordinates) {
+                    window.exportAirportCoordinates();
+                } else {
+                    console.log("Coordinate helper not active. Press 📍 button to activate.");
+                }
+            };
+            
+            window.clearTempAirports = function() {
+                window.tempAirports = [];
+                console.log("Temporary airports cleared.");
+            };
+            
+            console.log("🗺️ Helper functions available:");
+            console.log("  exportAirportCoordinates() - Export all defined airports");
+            console.log("  clearTempAirports() - Clear temporary airport list");
         });
 
         async function updateData() {
@@ -1200,36 +1273,39 @@
                 return;
             }
 
+            // Use proper viewBox from config
+            const viewBox = window.MAP_CONFIG ? window.MAP_CONFIG.viewBox : "-400 -500 1200 1000";
+
             mapDiv.innerHTML = `
                 <div style="height: 100%; display: flex; flex-direction: column;">
                     <div style="text-align: center; margin-bottom: 10px;">
                         <h4 style="color: #4a90e2; margin: 0;">${departure} ➜ ${arrival}</h4>
-                        <div style="font-size: 12px; color: #ccc;">Live Flight Tracking</div>
+                        <div style="font-size: 12px; color: #ccc;">Live Flight Tracking • Mouse wheel to zoom • Drag to pan</div>
                     </div>
                     <div style="flex: 1; position: relative; overflow: hidden; border-radius: 8px; background: #1a1a3e;">
                         <div style="width: 100%; height: 100%; position: relative;">
                             <object data="${mapPath}" type="image/svg+xml" style="width: 100%; height: 100%; pointer-events: none;" id="gameMapSVG"></object>
-                            <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;" viewBox="0 0 800 600">
+                            <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;" viewBox="${viewBox}" id="overlayMap">
                                 <!-- Flight route line -->
-                                <line id="routeLine" x1="${depCoords.x + 400}" y1="${300 - depCoords.y}" x2="${arrCoords.x + 400}" y2="${300 - arrCoords.y}" 
-                                      stroke="#4a90e2" stroke-width="2" stroke-dasharray="5,5" opacity="0.8">
-                                    <animate attributeName="stroke-dashoffset" values="0;-10" dur="2s" repeatCount="indefinite"/>
+                                <line id="routeLine" x1="${depCoords.x}" y1="${depCoords.y}" x2="${arrCoords.x}" y2="${arrCoords.y}" 
+                                      stroke="#4a90e2" stroke-width="3" stroke-dasharray="8,4" opacity="0.9">
+                                    <animate attributeName="stroke-dashoffset" values="0;-12" dur="2s" repeatCount="indefinite"/>
                                 </line>
                                 
                                 <!-- Departure airport marker -->
-                                <circle cx="${depCoords.x + 400}" cy="${300 - depCoords.y}" r="6" fill="#50c878" stroke="white" stroke-width="2"/>
-                                <text x="${depCoords.x + 400}" y="${300 - depCoords.y - 10}" text-anchor="middle" fill="#50c878" 
-                                      font-size="10" font-weight="bold">${departure}</text>
+                                <circle cx="${depCoords.x}" cy="${depCoords.y}" r="8" fill="#50c878" stroke="white" stroke-width="2"/>
+                                <text x="${depCoords.x}" y="${depCoords.y - 15}" text-anchor="middle" fill="#50c878" 
+                                      font-size="12" font-weight="bold">${departure}</text>
                                 
                                 <!-- Arrival airport marker -->
-                                <circle cx="${arrCoords.x + 400}" cy="${300 - arrCoords.y}" r="6" fill="#f44336" stroke="white" stroke-width="2"/>
-                                <text x="${arrCoords.x + 400}" y="${300 - arrCoords.y - 10}" text-anchor="middle" fill="#f44336" 
-                                      font-size="10" font-weight="bold">${arrival}</text>
+                                <circle cx="${arrCoords.x}" cy="${arrCoords.y}" r="8" fill="#f44336" stroke="white" stroke-width="2"/>
+                                <text x="${arrCoords.x}" y="${arrCoords.y - 15}" text-anchor="middle" fill="#f44336" 
+                                      font-size="12" font-weight="bold">${arrival}</text>
                                 
                                 <!-- Live aircraft position (will be updated via JavaScript) -->
                                 <g id="aircraftMarker" style="display: none;">
-                                    <circle cx="0" cy="0" r="4" fill="#ffff00" stroke="white" stroke-width="1"/>
-                                    <text x="0" y="-8" text-anchor="middle" fill="#ffff00" font-size="8" font-weight="bold" id="aircraftCallsign"></text>
+                                    <circle cx="0" cy="0" r="6" fill="#ffff00" stroke="white" stroke-width="2"/>
+                                    <text x="0" y="-12" text-anchor="middle" fill="#ffff00" font-size="10" font-weight="bold" id="aircraftCallsign"></text>
                                 </g>
                             </svg>
                         </div>
@@ -1255,10 +1331,11 @@
             
             if (!aircraftMarker || !aircraftCallsignText) return;
 
-            // Convert PTFS coordinates to SVG coordinates (1px = 100 studs, center at 400,300)
-            const scale = 100;
-            const svgX = (aircraftData.position.x / scale) + 400;
-            const svgY = 300 - (aircraftData.position.y / scale); // Flip Y axis for SVG
+            // Convert PTFS coordinates to SVG coordinates (1px = 100 studs)
+            // Using the simplified coordinate system from map config
+            const scale = window.MAP_CONFIG ? window.MAP_CONFIG.coordinateScale : 100;
+            const svgX = aircraftData.position.x / scale;
+            const svgY = -aircraftData.position.y / scale; // Flip Y axis for SVG
             
             aircraftMarker.style.display = 'block';
             aircraftMarker.setAttribute('transform', `translate(${svgX}, ${svgY})`);
@@ -1268,9 +1345,10 @@
             const trackingStatus = document.getElementById('trackingStatus');
             if (trackingStatus) {
                 trackingStatus.innerHTML = `
-                    Live: ${trackingCallsign} | Alt: ${aircraftData.altitude}ft | 
+                    🛩️ Live: ${trackingCallsign} | Alt: ${aircraftData.altitude}ft | 
                     Speed: ${Math.round(aircraftData.groundSpeed)}kts | 
-                    Heading: ${aircraftData.heading}°
+                    Heading: ${aircraftData.heading}° | 
+                    Pos: ${svgX.toFixed(1)}, ${svgY.toFixed(1)}
                 `;
             }
         }
@@ -1553,6 +1631,12 @@
         }
 
         let currentZoom = 1;
+        let panX = 0;
+        let panY = 0;
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let coordinateHelperActive = false;
 
         function openFullscreenMap(mapType, title) {
             const sourceMap = document.getElementById(mapType + 'Map');
@@ -1568,8 +1652,8 @@
             // Update any SVGs to fill the space better
             const svgs = mapContent.querySelectorAll('svg');
             svgs.forEach(svg => {
-                svg.style.width = '90%';
-                svg.style.height = '90%';
+                svg.style.width = '100%';
+                svg.style.height = '100%';
                 svg.style.maxWidth = 'none';
                 svg.style.maxHeight = 'none';
             });
@@ -1578,29 +1662,121 @@
             zoomableContent.appendChild(mapContent);
             fullscreenTitle.textContent = title;
             
-            // Reset zoom
+            // Reset zoom and pan
             currentZoom = 1;
-            zoomableContent.style.transform = `scale(${currentZoom})`;
+            panX = 0;
+            panY = 0;
+            updateTransform();
             
             fullscreenOverlay.style.display = 'block';
+            
+            // Setup mouse controls
+            setupMouseControls();
             
             // Prevent body scrolling
             document.body.style.overflow = 'hidden';
         }
 
+        function setupMouseControls() {
+            const zoomableContent = document.getElementById('zoomableContent');
+            if (!zoomableContent) return;
+            
+            // Mouse wheel zoom
+            zoomableContent.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                const rect = zoomableContent.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                const newZoom = Math.max(0.1, Math.min(currentZoom * zoomFactor, 10));
+                
+                // Zoom towards mouse position
+                panX += (mouseX - rect.width / 2) * (1 - zoomFactor) * currentZoom;
+                panY += (mouseY - rect.height / 2) * (1 - zoomFactor) * currentZoom;
+                
+                currentZoom = newZoom;
+                updateTransform();
+            });
+            
+            // Mouse drag pan
+            zoomableContent.addEventListener('mousedown', function(e) {
+                if (!coordinateHelperActive) {
+                    isDragging = true;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                    zoomableContent.classList.add('dragging');
+                }
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (isDragging) {
+                    const deltaX = e.clientX - lastMouseX;
+                    const deltaY = e.clientY - lastMouseY;
+                    
+                    panX += deltaX;
+                    panY += deltaY;
+                    
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                    
+                    updateTransform();
+                }
+            });
+            
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+                zoomableContent.classList.remove('dragging');
+            });
+        }
+
+        function updateTransform() {
+            const zoomableContent = document.getElementById('zoomableContent');
+            if (zoomableContent) {
+                zoomableContent.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+            }
+        }
+
         function zoomIn() {
-            currentZoom = Math.min(currentZoom * 1.25, 5);
-            document.getElementById('zoomableContent').style.transform = `scale(${currentZoom})`;
+            currentZoom = Math.min(currentZoom * 1.25, 10);
+            updateTransform();
         }
 
         function zoomOut() {
-            currentZoom = Math.max(currentZoom / 1.25, 0.5);
-            document.getElementById('zoomableContent').style.transform = `scale(${currentZoom})`;
+            currentZoom = Math.max(currentZoom / 1.25, 0.1);
+            updateTransform();
         }
 
         function resetZoom() {
             currentZoom = 1;
-            document.getElementById('zoomableContent').style.transform = `scale(${currentZoom})`;
+            panX = 0;
+            panY = 0;
+            updateTransform();
+        }
+
+        function pan(deltaX, deltaY) {
+            panX += deltaX;
+            panY += deltaY;
+            updateTransform();
+        }
+
+        function resetPan() {
+            panX = 0;
+            panY = 0;
+            updateTransform();
+        }
+
+        function toggleCoordinateHelper() {
+            coordinateHelperActive = !coordinateHelperActive;
+            if (coordinateHelperActive) {
+                console.log("🗺️ Coordinate Helper ACTIVATED!");
+                console.log("Left-click for coordinates, Right-click to add airports");
+                if (window.setupCoordinateHelper) {
+                    window.setupCoordinateHelper();
+                }
+            } else {
+                console.log("🗺️ Coordinate Helper DEACTIVATED");
+            }
         }
 
         function closeFullscreenMap() {

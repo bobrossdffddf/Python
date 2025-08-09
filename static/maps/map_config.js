@@ -6,9 +6,12 @@ const MAP_CONFIG = {
     // Path to your game map SVG file
     gameMapPath: '/static/maps/game_map.svg',
     
-    // Map dimensions (SVG viewBox, content may extend beyond)
-    mapWidth: 800,
-    mapHeight: 600,
+    // Map dimensions - expanded to show full game world
+    mapWidth: 1200,
+    mapHeight: 1000,
+    
+    // SVG viewBox to show the entire game area (adjust these based on your map bounds)
+    viewBox: "-400 -500 1200 1000", // x, y, width, height
     
     // Simplified coordinate system: 1px = 100 studs
     // No offset needed, direct coordinate mapping
@@ -42,37 +45,124 @@ const MAP_CONFIG = {
     }
 };
 
-// Function to help you find coordinates
+// Enhanced coordinate helper with airport definition
 function setupCoordinateHelper() {
-    console.log("Map Coordinate Helper Active!");
-    console.log("Click on your map to get coordinates for airports");
+    console.log("🗺️ Map Coordinate Helper Active!");
+    console.log("Right-click on map to add airport coordinates");
+    console.log("Left-click to get coordinates");
     
-    const mapImage = document.getElementById('gameMapImage');
-    if (mapImage) {
-        mapImage.addEventListener('click', function(event) {
-            const rect = mapImage.getBoundingClientRect();
+    window.tempAirports = window.tempAirports || [];
+    
+    // Function to add coordinates to any map element
+    function addCoordinateListener(mapElement) {
+        if (!mapElement) return;
+        
+        // Left click - show coordinates
+        mapElement.addEventListener('click', function(event) {
+            const rect = mapElement.getBoundingClientRect();
             const x = Math.round(event.clientX - rect.left);
             const y = Math.round(event.clientY - rect.top);
             
-            console.log(`Clicked at: { x: ${x}, y: ${y} }`);
+            // Convert to SVG coordinates (accounting for scaling)
+            const svgX = (x / rect.width) * MAP_CONFIG.mapWidth - 400;
+            const svgY = (y / rect.height) * MAP_CONFIG.mapHeight - 500;
             
-            // Create a temporary marker
-            const marker = document.createElement('div');
-            marker.style.position = 'absolute';
-            marker.style.left = (rect.left + x - 5) + 'px';
-            marker.style.top = (rect.top + y - 5) + 'px';
-            marker.style.width = '10px';
-            marker.style.height = '10px';
-            marker.style.backgroundColor = 'red';
-            marker.style.borderRadius = '50%';
-            marker.style.zIndex = '9999';
-            marker.style.pointerEvents = 'none';
-            document.body.appendChild(marker);
+            console.log(`📍 Clicked at SVG coords: { x: ${svgX.toFixed(1)}, y: ${svgY.toFixed(1)} }`);
+            console.log(`   Screen coords: { x: ${x}, y: ${y} }`);
             
-            // Remove marker after 3 seconds
-            setTimeout(() => marker.remove(), 3000);
+            // Create temporary marker
+            createTempMarker(rect.left + x, rect.top + y, `${svgX.toFixed(1)}, ${svgY.toFixed(1)}`);
+        });
+        
+        // Right click - add airport
+        mapElement.addEventListener('contextmenu', function(event) {
+            event.preventDefault();
+            
+            const rect = mapElement.getBoundingClientRect();
+            const x = Math.round(event.clientX - rect.left);
+            const y = Math.round(event.clientY - rect.top);
+            
+            // Convert to SVG coordinates
+            const svgX = (x / rect.width) * MAP_CONFIG.mapWidth - 400;
+            const svgY = (y / rect.height) * MAP_CONFIG.mapHeight - 500;
+            
+            const airportCode = prompt("Enter airport code (e.g., IBAR):");
+            if (airportCode) {
+                addAirportCoordinate(airportCode.toUpperCase(), svgX, svgY);
+                createTempMarker(rect.left + x, rect.top + y, airportCode, true);
+            }
         });
     }
+    
+    // Auto-attach to existing map elements
+    const gameMapElements = document.querySelectorAll('svg, object[type="image/svg+xml"], #gameMapImage');
+    gameMapElements.forEach(addCoordinateListener);
+    
+    // Also watch for new map elements
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.tagName === 'SVG' || (node.tagName === 'OBJECT' && node.type === 'image/svg+xml')) {
+                    addCoordinateListener(node);
+                }
+            });
+        });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function addAirportCoordinate(code, x, y) {
+    window.tempAirports.push({ code, x: x.toFixed(1), y: y.toFixed(1) });
+    console.log(`✈️ Added ${code}: { x: ${x.toFixed(1)}, y: ${y.toFixed(1)} }`);
+    console.log("📋 Copy this to your map_config.js:");
+    console.log(`'${code}': { x: ${x.toFixed(1)}, y: ${y.toFixed(1)} },`);
+}
+
+function exportAirportCoordinates() {
+    if (window.tempAirports && window.tempAirports.length > 0) {
+        console.log("📋 All airport coordinates:");
+        window.tempAirports.forEach(airport => {
+            console.log(`'${airport.code}': { x: ${airport.x}, y: ${airport.y} },`);
+        });
+    } else {
+        console.log("No airports defined yet. Right-click on map to add airports.");
+    }
+}
+
+function createTempMarker(x, y, label, permanent = false) {
+    const marker = document.createElement('div');
+    marker.style.position = 'fixed';
+    marker.style.left = (x - 8) + 'px';
+    marker.style.top = (y - 8) + 'px';
+    marker.style.width = '16px';
+    marker.style.height = '16px';
+    marker.style.backgroundColor = permanent ? '#50c878' : '#ff4444';
+    marker.style.border = '2px solid white';
+    marker.style.borderRadius = '50%';
+    marker.style.zIndex = '10000';
+    marker.style.pointerEvents = 'none';
+    marker.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+    
+    // Add label
+    const labelDiv = document.createElement('div');
+    labelDiv.style.position = 'absolute';
+    labelDiv.style.top = '20px';
+    labelDiv.style.left = '50%';
+    labelDiv.style.transform = 'translateX(-50%)';
+    labelDiv.style.background = 'rgba(0,0,0,0.8)';
+    labelDiv.style.color = 'white';
+    labelDiv.style.padding = '2px 6px';
+    labelDiv.style.borderRadius = '4px';
+    labelDiv.style.fontSize = '10px';
+    labelDiv.style.fontWeight = 'bold';
+    labelDiv.style.whiteSpace = 'nowrap';
+    labelDiv.textContent = label;
+    marker.appendChild(labelDiv);
+    
+    document.body.appendChild(marker);
+    
+    // Remove marker after delay
+    setTimeout(() => marker.remove(), permanent ? 10000 : 3000);
 }
 
 // Export for use in main template
