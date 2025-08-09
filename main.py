@@ -1,3 +1,4 @@
+
 import json
 import random
 import asyncio
@@ -77,18 +78,6 @@ def make_clearance(flightplan, runway="___"):
         f"Squawk {squawk}.\n"
     )
 
-MOCK_FLIGHTPLAN = {
-    "robloxName": "PTC_Helper",
-    "callsign": "Shamrock-1337",
-    "realcallsign": "Shamrock-1337",
-    "aircraft": "A330",
-    "flightrules": "IFR",
-    "departing": "IMLR",
-    "arriving": "IGRV",
-    "route": "N/A",
-    "flightlevel": "040"
-}
-
 app = Flask(__name__)
 flights_history = []
 status_log = []
@@ -165,8 +154,6 @@ def start_ws_loop():
 
 @app.route('/')
 def index():
-    # This route would typically serve your HTML file, which might include JavaScript
-    # to set an airport filter cookie and handle audio playback.
     return render_template('index.html')
 
 @app.route('/api/flights')
@@ -188,13 +175,15 @@ def get_flights():
             if arriving_distance is not None:
                 flight_copy["distance_to_arriving"] = arriving_distance
         
-        # Handle filtering logic
+        # Handle filtering logic - only show clearances for departing flights
         if current_airport_filter:
             if flight["arriving"] == current_airport_filter:
                 flight_copy.pop("clearance", None)  # Remove clearance for arriving flights
-                flight_copy["is_arriving_to_filter"] = True  # Mark for red styling
-            else:
+                flight_copy["is_arriving_to_filter"] = True  # Mark for yellow styling
+            elif flight["departing"] == current_airport_filter:
                 flight_copy["is_arriving_to_filter"] = False
+            else:
+                continue  # Skip flights not related to filtered airport
         else:
             flight_copy["is_arriving_to_filter"] = False
             
@@ -297,11 +286,6 @@ def set_airport_filter():
 @app.route('/api/get_airport_filter')
 def get_airport_filter():
     return jsonify({"filter": current_airport_filter})
-
-@app.route('/api/aircraft')
-def get_aircraft():
-    """Get live aircraft data for the map"""
-    return jsonify(aircraft_data)
 
 if __name__ == '__main__':
     ws_thread = threading.Thread(target=start_ws_loop, daemon=True)
